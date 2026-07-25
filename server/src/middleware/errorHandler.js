@@ -7,7 +7,11 @@ export function errorHandler(err, req, res, next) {
     console.error(`[${req.method} ${req.path}]`, err);
   }
 
-  res.status(status).json({ error: status >= 500 ? 'Something went wrong.' : err.message });
+  // clientMessage is set where a 5xx has a cause worth explaining, such as the
+  // model being temporarily out of capacity.
+  const message = err.clientMessage ?? (status >= 500 ? 'Something went wrong.' : err.message);
+
+  res.status(status).json({ error: message });
 }
 
 export function notFound(req, res) {

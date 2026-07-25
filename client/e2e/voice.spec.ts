@@ -17,6 +17,7 @@ test('a spoken note produces a script without choosing a category', async ({ pag
 
   await page.getByLabel('Email').fill(EVALUATOR.email);
   await page.getByLabel('Password').fill(EVALUATOR.password);
+  // The mode switcher is a tablist, so this matches only the submit control.
   await page.getByRole('button', { name: 'Sign in' }).click();
 
   await expect(page.getByRole('heading', { name: "What's happening?" })).toBeVisible();
@@ -28,7 +29,7 @@ test('a spoken note produces a script without choosing a category', async ({ pag
     )
   ).toBe(true);
 
-  const record = page.getByRole('button', { name: /just say it/i });
+  const record = page.getByRole('button', { name: /speak instead/i });
   await expect(record).toBeVisible();
   await record.click();
 
@@ -40,7 +41,9 @@ test('a spoken note produces a script without choosing a category', async ({ pag
   await page.waitForTimeout(7000);
   await stop.click();
 
-  await expect(page.getByText('Preparing your steps…')).toBeVisible();
+  // Left the category screen; asserted by structure rather than wording, which
+  // changes with the copy.
+  await expect(record).toBeHidden();
 
   // A script came back, and the category label proves the model chose it from
   // the recording — nothing was tapped to select one.

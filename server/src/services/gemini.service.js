@@ -194,17 +194,41 @@ export function buildVoicePrompt(role, localHour, profile) {
   return lines.join('\n');
 }
 
+/**
+ * Being out of quota is a temporary, expected condition rather than a fault, so
+ * it is reported as such: a reader who is told to try again shortly can act on
+ * that, where "something went wrong" leaves them stuck.
+ */
+export function translateFailure(err) {
+  const status = /got status: (\d+)/.exec(err?.message ?? '')?.[1];
+
+  if (status === '429') {
+    return Object.assign(new Error('The model is at capacity.'), {
+      status: 503,
+      clientMessage: 'Too many requests just now. Try again in a minute.',
+    });
+  }
+
+  return err;
+}
+
 async function generateJson({ systemInstruction, contents, responseSchema, temperature }) {
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents,
-    config: {
-      systemInstruction,
-      responseMimeType: 'application/json',
-      responseSchema,
-      temperature,
-    },
-  });
+  let response;
+
+  try {
+    response = await ai.models.generateContent({
+      model: MODEL,
+      contents,
+      config: {
+        systemInstruction,
+        responseMimeType: 'application/json',
+        responseSchema,
+        temperature,
+      },
+    });
+  } catch (err) {
+    throw translateFailure(err);
+  }
 
   if (!response.text) {
     throw new Error('Gemini returned an empty response.');

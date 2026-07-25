@@ -19,12 +19,17 @@ CREATE TABLE IF NOT EXISTS action_categories (
   label TEXT NOT NULL
 );
 
-INSERT INTO action_categories (code, label) VALUES
-  ('craving', 'Urge to use right now'),
-  ('panic', 'Panic / anxiety spiral'),
-  ('post_relapse', 'Just relapsed'),
-  ('caregiver_checkin', 'Caregiver support script')
-ON CONFLICT (code) DO NOTHING;
+-- Presented most to least urgent, so the first thing a distressed reader sees
+-- is the most likely reason they opened the app.
+ALTER TABLE action_categories ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
+
+INSERT INTO action_categories (code, label, sort_order) VALUES
+  ('craving', 'Urge to use right now', 1),
+  ('panic', 'Panic / anxiety spiral', 2),
+  ('post_relapse', 'Just relapsed', 3),
+  ('caregiver_checkin', 'Supporting someone else', 4)
+ON CONFLICT (code) DO UPDATE
+  SET label = EXCLUDED.label, sort_order = EXCLUDED.sort_order;
 
 CREATE TABLE IF NOT EXISTS interventions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

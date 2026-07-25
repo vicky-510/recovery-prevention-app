@@ -38,7 +38,9 @@ async function record(userId, categoryCode, localHour, script) {
 }
 
 export async function listCategories() {
-  const { rows } = await pool.query('SELECT code, label FROM action_categories ORDER BY code');
+  const { rows } = await pool.query(
+    'SELECT code, label FROM action_categories ORDER BY sort_order, code'
+  );
   return rows;
 }
 

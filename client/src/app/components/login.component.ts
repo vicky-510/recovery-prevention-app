@@ -8,81 +8,152 @@ import { Role } from '../models';
   standalone: true,
   imports: [FormsModule],
   template: `
-    <main class="min-h-screen flex items-center justify-center p-6">
-      <section class="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-        <h1 class="text-2xl font-semibold text-slate-900">Steady</h1>
-        <p class="mt-1 text-sm text-slate-500">
-          Support in the moments that matter most.
-        </p>
-
-        <form class="mt-6 space-y-4" (ngSubmit)="submit()">
-          <div>
-            <label for="email" class="block text-sm font-medium text-slate-700">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autocomplete="email"
-              required
-              [(ngModel)]="email"
-              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            />
-          </div>
-
-          <div>
-            <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'"
-              required
-              [(ngModel)]="password"
-              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            />
-          </div>
-
-          @if (mode === 'signup') {
-            <div>
-              <label for="role" class="block text-sm font-medium text-slate-700">I am a</label>
-              <select
-                id="role"
-                name="role"
-                [(ngModel)]="role"
-                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              >
-                <option value="person">Person in recovery</option>
-                <option value="caregiver">Caregiver</option>
-              </select>
-            </div>
-          }
-
-          @if (error) {
-            <p role="alert" class="text-sm text-red-600">{{ error }}</p>
-          }
-
-          <button
-            type="submit"
-            [disabled]="busy"
-            class="w-full rounded-lg bg-slate-900 px-4 py-2.5 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+    <main class="flex min-h-screen items-center justify-center p-5">
+      <div class="w-full max-w-md animate-fade-up">
+        <header class="mb-8 text-center">
+          <div
+            class="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-calm/20 bg-calm/10"
           >
-            {{ busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account' }}
-          </button>
-        </form>
+            <span class="text-2xl" aria-hidden="true">🫧</span>
+          </div>
+          <h1 class="text-3xl font-semibold tracking-tight text-chalk">Steady</h1>
+          <p class="mt-2 text-[15px] leading-relaxed text-mist">
+            Support in the moments that matter most.
+          </p>
+        </header>
 
-        <button
-          type="button"
-          (click)="toggleMode()"
-          class="mt-4 w-full text-sm text-slate-500 hover:text-slate-700 hover:underline"
+        <section
+          class="rounded-2xl border border-line bg-surface/80 p-7 shadow-2xl shadow-black/40 backdrop-blur"
         >
-          {{ mode === 'login' ? 'New here? Create an account' : 'Already have an account? Sign in' }}
-        </button>
-      </section>
+          <!-- Tabs rather than buttons, so they do not collide with the submit
+               control that shares their wording. -->
+          <div role="tablist" class="mb-6 grid grid-cols-2 gap-1 rounded-xl bg-ink/60 p-1">
+            @for (option of modes; track option.value) {
+              <button
+                type="button"
+                role="tab"
+                [attr.aria-selected]="mode === option.value"
+                (click)="setMode(option.value)"
+                class="rounded-lg px-3 py-2 text-sm font-medium transition"
+                [class]="
+                  mode === option.value
+                    ? 'bg-raised text-chalk shadow-sm'
+                    : 'text-mist hover:text-chalk'
+                "
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
+
+          <form class="space-y-5" (ngSubmit)="submit()">
+            <div>
+              <label for="email" class="mb-2 block text-sm font-medium text-chalk">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+                [(ngModel)]="email"
+                class="w-full rounded-xl border border-line bg-ink/70 px-4 py-3 text-chalk placeholder:text-mist/50 transition focus:border-calm/50 focus:outline-none focus:ring-4 focus:ring-calm/10"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <label for="password" class="mb-2 block text-sm font-medium text-chalk">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'"
+                required
+                [(ngModel)]="password"
+                class="w-full rounded-xl border border-line bg-ink/70 px-4 py-3 text-chalk placeholder:text-mist/50 transition focus:border-calm/50 focus:outline-none focus:ring-4 focus:ring-calm/10"
+                [placeholder]="mode === 'signup' ? 'At least 8 characters' : '••••••••'"
+              />
+            </div>
+
+            @if (mode === 'signup') {
+              <fieldset>
+                <legend class="mb-2 block text-sm font-medium text-chalk">I am</legend>
+                <div class="grid gap-3 sm:grid-cols-2">
+                  @for (option of roles; track option.value) {
+                    <button
+                      type="button"
+                      (click)="role = option.value"
+                      class="rounded-xl border p-4 text-left transition"
+                      [class]="
+                        role === option.value
+                          ? 'border-calm/50 bg-calm/10'
+                          : 'border-line bg-ink/40 hover:border-line/80 hover:bg-raised'
+                      "
+                    >
+                      <span class="block text-xl" aria-hidden="true">{{ option.icon }}</span>
+                      <span class="mt-2 block text-sm font-medium text-chalk">
+                        {{ option.label }}
+                      </span>
+                      <span class="mt-0.5 block text-xs leading-relaxed text-mist">
+                        {{ option.hint }}
+                      </span>
+                    </button>
+                  }
+                </div>
+              </fieldset>
+            }
+
+            @if (error) {
+              <p
+                role="alert"
+                class="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+              >
+                {{ error }}
+              </p>
+            }
+
+            <button
+              type="submit"
+              [disabled]="busy"
+              class="w-full rounded-xl bg-calm px-4 py-3.5 font-semibold text-ink transition hover:bg-calm-dim disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {{ busy ? 'One moment…' : mode === 'login' ? 'Sign in' : 'Create account' }}
+            </button>
+          </form>
+        </section>
+
+        <p class="mt-6 text-center text-xs leading-relaxed text-mist/70">
+          Steady offers grounding steps, not medical care.<br />
+          In an emergency, contact your local emergency services.
+        </p>
+      </div>
     </main>
   `,
 })
 export class LoginComponent {
   private api = inject(ApiService);
+
+  protected readonly modes = [
+    { value: 'login' as const, label: 'Sign in' },
+    { value: 'signup' as const, label: 'Create account' },
+  ];
+
+  protected readonly roles = [
+    {
+      value: 'person' as Role,
+      icon: '🌱',
+      label: 'In recovery',
+      hint: 'Steps for me',
+    },
+    {
+      value: 'caregiver' as Role,
+      icon: '🤝',
+      label: 'A caregiver',
+      hint: 'Words for someone I love',
+    },
+  ];
 
   mode: 'login' | 'signup' = 'login';
   email = '';
@@ -91,8 +162,8 @@ export class LoginComponent {
   busy = false;
   error = '';
 
-  toggleMode(): void {
-    this.mode = this.mode === 'login' ? 'signup' : 'login';
+  setMode(mode: 'login' | 'signup'): void {
+    this.mode = mode;
     this.error = '';
   }
 

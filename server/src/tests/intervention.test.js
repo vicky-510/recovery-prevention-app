@@ -44,11 +44,13 @@ describe('GET /api/interventions/categories', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.map((c) => c.code).sort()).toEqual([
-      'caregiver_checkin',
+    // Ordered deliberately: a distressed reader should meet the most likely
+    // reason they opened the app first, not whatever sorts first.
+    expect(res.body.map((c) => c.code)).toEqual([
       'craving',
       'panic',
       'post_relapse',
+      'caregiver_checkin',
     ]);
     expect(res.body.every((c) => typeof c.label === 'string' && c.label.length > 0)).toBe(true);
   });

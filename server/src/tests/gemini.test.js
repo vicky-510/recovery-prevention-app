@@ -2,6 +2,7 @@ import {
   buildEducationTopic,
   buildSituation,
   buildVoicePrompt,
+  translateFailure,
 } from '../services/gemini.service.js';
 
 const CATEGORIES = ['craving', 'panic', 'post_relapse', 'caregiver_checkin'];
@@ -84,5 +85,31 @@ describe('buildEducationTopic', () => {
 
   it('still produces a usable topic for an unknown category', () => {
     expect(buildEducationTopic('meteor_strike', 'person')).toContain('meteor_strike');
+  });
+});
+
+describe('translateFailure', () => {
+  // Running out of quota is temporary and worth explaining. Flattened into a
+  // generic 500, a reader is told only that something went wrong.
+  it('reports a rate-limited model as temporary, with advice', () => {
+    const translated = translateFailure(
+      new Error('got status: 429 Too Many Requests. {"error":{"code":429}}')
+    );
+
+    expect(translated.status).toBe(503);
+    expect(translated.clientMessage).toMatch(/try again/i);
+  });
+
+  it.each([
+    ['a server fault', new Error('got status: 500 Internal Server Error')],
+    ['a bad request', new Error('got status: 400 Bad Request')],
+    ['an unrecognised failure', new Error('socket hang up')],
+  ])('passes %s through untouched', (_label, err) => {
+    expect(translateFailure(err)).toBe(err);
+  });
+
+  it('survives an error with no message', () => {
+    const err = {};
+    expect(translateFailure(err)).toBe(err);
   });
 });

@@ -1,12 +1,106 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
-    <title>Steady — Recovery Support</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Steady — support in the hardest moments</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#08090b" />
+    <meta
+      name="description"
+      content="Support for people navigating substance use disorders, and the people who care for them."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: '#08090b',
+              surface: '#101217',
+              raised: '#171a20',
+              line: '#242831',
+              mist: '#9ba1ac',
+              chalk: '#f3f5f8',
+              calm: {
+                DEFAULT: '#5eead4',
+                dim: '#2dd4bf',
+                deep: '#0f766e',
+              },
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            },
+            animation: {
+              'fade-up': 'fadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both',
+              breathe: 'breathe 2.4s ease-in-out infinite',
+              'pulse-ring': 'pulseRing 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              fadeUp: {
+                '0%': { opacity: '0', transform: 'translateY(12px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              breathe: {
+                '0%, 100%': { transform: 'scale(1)', opacity: '0.9' },
+                '50%': { transform: 'scale(1.04)', opacity: '1' },
+              },
+              pulseRing: {
+                '0%': { transform: 'scale(0.95)', opacity: '0.7' },
+                '70%, 100%': { transform: 'scale(1.25)', opacity: '0' },
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        /* Two soft pools of light rather than a flat field, so the page has
+           depth without anything competing for attention. */
+        background-color: #08090b;
+        background-image:
+          radial-gradient(60rem 40rem at 15% -10%, rgba(45, 212, 191, 0.07), transparent 60%),
+          radial-gradient(50rem 35rem at 85% 105%, rgba(56, 189, 248, 0.05), transparent 60%);
+        background-attachment: fixed;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      ::selection {
+        background: rgba(94, 234, 212, 0.25);
+      }
+
+      /* Visible on every surface here, unlike the browser default. */
+      :focus-visible {
+        outline: 2px solid #5eead4;
+        outline-offset: 3px;
+        border-radius: 0.5rem;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
   </head>
-  <body class="bg-slate-100 text-slate-900">
+  <body class="bg-ink font-sans text-chalk antialiased">
     <app-root></app-root>
   </body>
 </html>

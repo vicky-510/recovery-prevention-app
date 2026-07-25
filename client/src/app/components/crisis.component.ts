@@ -7,12 +7,18 @@ import { Category, EducationNote, Profile, ProfileUpdate, Script } from '../mode
 
 type View = 'categories' | 'generating' | 'script' | 'education' | 'contact';
 
-/** Presentational icons keyed by the category codes seeded in the database. */
-const CATEGORY_ICONS: Record<string, string> = {
-  craving: '🌊',
-  panic: '💨',
-  post_relapse: '🌱',
-  caregiver_checkin: '🤝',
+/** Presentational detail keyed by the category codes seeded in the database. */
+const CATEGORY_STYLE: Record<string, { icon: string; tint: string }> = {
+  craving: { icon: '🌊', tint: 'group-hover:border-sky-400/40 group-hover:bg-sky-400/[0.06]' },
+  panic: { icon: '💨', tint: 'group-hover:border-violet-400/40 group-hover:bg-violet-400/[0.06]' },
+  post_relapse: {
+    icon: '🌱',
+    tint: 'group-hover:border-emerald-400/40 group-hover:bg-emerald-400/[0.06]',
+  },
+  caregiver_checkin: {
+    icon: '🤝',
+    tint: 'group-hover:border-amber-400/40 group-hover:bg-amber-400/[0.06]',
+  },
 };
 
 @Component({
@@ -20,320 +26,435 @@ const CATEGORY_ICONS: Record<string, string> = {
   standalone: true,
   imports: [FormsModule],
   template: `
-    <main class="min-h-screen p-6">
-      <header class="mx-auto flex max-w-2xl items-center justify-between">
-        <h1 class="text-lg font-semibold text-slate-900">Steady</h1>
-        <div class="flex items-center gap-4">
+    <div class="min-h-screen">
+      <header class="sticky top-0 z-10 border-b border-line/60 bg-ink/80 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
           <button
             type="button"
-            (click)="openContactSetup()"
-            class="text-sm text-slate-500 hover:text-slate-700 hover:underline"
+            (click)="reset()"
+            class="flex items-center gap-2.5 text-left transition hover:opacity-80"
           >
-            About you
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-xl border border-calm/20 bg-calm/10 text-sm"
+              aria-hidden="true"
+              >🫧</span
+            >
+            <span class="font-semibold tracking-tight text-chalk">Steady</span>
           </button>
-          <button
-            type="button"
-            (click)="signOut()"
-            class="text-sm text-slate-500 hover:text-slate-700 hover:underline"
-          >
-            Sign out
-          </button>
+
+          <nav class="flex items-center gap-1">
+            <button
+              type="button"
+              (click)="openProfile()"
+              class="rounded-lg px-3 py-1.5 text-sm text-mist transition hover:bg-raised hover:text-chalk"
+            >
+              About you
+            </button>
+            <button
+              type="button"
+              (click)="signOut()"
+              class="rounded-lg px-3 py-1.5 text-sm text-mist transition hover:bg-raised hover:text-chalk"
+            >
+              Sign out
+            </button>
+          </nav>
         </div>
       </header>
 
-      <div class="mx-auto mt-8 max-w-2xl">
+      <main class="mx-auto max-w-3xl px-5 pb-16 pt-10">
         @switch (view) {
           @case ('categories') {
-            <h2 class="text-3xl font-semibold text-slate-900">What's happening?</h2>
-            <p class="mt-2 text-slate-500">Tap once, or say it out loud.</p>
-
-            @if (error) {
-              <p role="alert" class="mt-4 text-sm text-red-600">{{ error }}</p>
-            }
-
-            @if (voice.canRecord) {
-              <button
-                type="button"
-                (click)="voice.recording() ? finishRecording() : startRecording()"
-                class="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl px-6 py-5 text-lg font-medium transition"
-                [class]="
-                  voice.recording()
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'border-2 border-dashed border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-                "
-              >
-                <span class="text-2xl" aria-hidden="true">{{ voice.recording() ? '⏹️' : '🎙️' }}</span>
-                {{
-                  voice.recording()
-                    ? "Listening — tap when you're done"
-                    : "Or just say it — I'll listen"
-                }}
-              </button>
-              <p class="mt-2 text-center text-sm text-slate-400">
-                You don't need to pick a category. Say whatever comes out.
+            <div class="animate-fade-up">
+              <h1 class="text-4xl font-semibold tracking-tight text-chalk sm:text-5xl">
+                What's happening?
+              </h1>
+              <p class="mt-3 text-lg text-mist">
+                @if (profile?.first_name) {
+                  {{ profile!.first_name }} — tap once, or just say it.
+                } @else {
+                  Tap once, or just say it. No typing needed.
+                }
               </p>
-            }
 
-            <div class="mt-4 grid gap-4 sm:grid-cols-2">
-              @for (category of categories; track category.code) {
+              @if (profile?.days_sober !== null && profile?.days_sober !== undefined) {
+                <p class="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.07] px-3.5 py-1.5 text-sm text-emerald-300">
+                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                  {{ profile!.days_sober }} days
+                </p>
+              }
+
+              @if (error) {
+                <p
+                  role="alert"
+                  class="mt-6 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+                >
+                  {{ error }}
+                </p>
+              }
+
+              @if (voice.canRecord) {
                 <button
                   type="button"
-                  (click)="trigger(category)"
-                  class="flex min-h-36 flex-col items-start justify-between rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-slate-400 hover:shadow focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  (click)="voice.recording() ? finishRecording() : startRecording()"
+                  class="group relative mt-8 flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-5 text-left transition"
+                  [class]="
+                    voice.recording()
+                      ? 'border-rose-400/40 bg-rose-500/[0.08]'
+                      : 'border-line bg-surface/70 hover:border-calm/40 hover:bg-calm/[0.05]'
+                  "
                 >
-                  <span class="text-3xl" aria-hidden="true">{{ icon(category.code) }}</span>
-                  <span class="mt-3 text-lg font-medium text-slate-900">{{ category.label }}</span>
+                  <span class="relative flex h-12 w-12 shrink-0 items-center justify-center">
+                    @if (voice.recording()) {
+                      <span
+                        class="absolute inset-0 animate-pulse-ring rounded-full bg-rose-400/40"
+                      ></span>
+                      <span
+                        class="relative flex h-12 w-12 animate-breathe items-center justify-center rounded-full bg-rose-500/20 text-xl"
+                        >⏹</span
+                      >
+                    } @else {
+                      <span
+                        class="flex h-12 w-12 items-center justify-center rounded-full bg-raised text-xl transition group-hover:bg-calm/15"
+                        >🎙</span
+                      >
+                    }
+                  </span>
+
+                  <span class="min-w-0">
+                    <span class="block font-medium text-chalk">
+                      {{ voice.recording() ? "I'm listening — tap when you're done" : 'Speak instead' }}
+                    </span>
+                    <span class="mt-0.5 block text-sm text-mist">
+                      {{
+                        voice.recording()
+                          ? 'Say whatever comes out. It does not have to make sense.'
+                          : "You don't need to pick anything. Just talk."
+                      }}
+                    </span>
+                  </span>
                 </button>
               }
-            </div>
 
-            @if (profile?.safe_contact_phone) {
-              <a
-                [href]="'tel:' + profile!.safe_contact_phone"
-                class="mt-4 flex items-center justify-center gap-3 rounded-2xl bg-emerald-700 px-6 py-5 text-lg font-medium text-white hover:bg-emerald-800"
-              >
-                <span class="text-2xl" aria-hidden="true">📞</span>
-                Call {{ profile!.safe_contact_name }} now
-              </a>
-            }
+              <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                @for (category of categories; track category.code) {
+                  <button
+                    type="button"
+                    (click)="trigger(category)"
+                    class="group flex min-h-[9.5rem] flex-col justify-between rounded-2xl border border-line bg-surface/70 p-5 text-left transition duration-200 hover:-translate-y-0.5"
+                    [class]="tint(category.code)"
+                  >
+                    <span
+                      class="flex h-11 w-11 items-center justify-center rounded-xl bg-ink/60 text-xl"
+                      aria-hidden="true"
+                      >{{ icon(category.code) }}</span
+                    >
+                    <span class="mt-4 text-[17px] font-medium leading-snug text-chalk">
+                      {{ category.label }}
+                    </span>
+                  </button>
+                }
+              </div>
+
+              @if (profile?.safe_contact_phone) {
+                <a
+                  [href]="'tel:' + profile!.safe_contact_phone"
+                  class="mt-4 flex items-center justify-center gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-6 py-4 font-medium text-emerald-300 transition hover:bg-emerald-500/15"
+                >
+                  <span class="text-lg" aria-hidden="true">📞</span>
+                  Call {{ profile!.safe_contact_name }}
+                </a>
+              }
+            </div>
           }
 
           @case ('generating') {
-            <div class="flex min-h-72 flex-col items-center justify-center text-center">
-              <div
-                class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-700"
-                role="status"
-                aria-label="Preparing your steps"
-              ></div>
-              <p class="mt-6 text-lg text-slate-600">Preparing your steps…</p>
+            <div class="flex min-h-[24rem] flex-col items-center justify-center text-center">
+              <div class="relative flex h-20 w-20 items-center justify-center">
+                <span class="absolute inset-0 animate-pulse-ring rounded-full bg-calm/30"></span>
+                <span
+                  class="relative h-16 w-16 animate-breathe rounded-full border border-calm/30 bg-calm/10"
+                ></span>
+              </div>
+              <p class="mt-8 text-lg text-chalk">Putting something together for you</p>
+              <p class="mt-1.5 text-sm text-mist">A few seconds. Breathe until then.</p>
             </div>
           }
 
           @case ('script') {
             @if (script) {
-              <p class="text-sm font-medium uppercase tracking-wide text-slate-400">
-                {{ activeLabel }}
-              </p>
-              <h2 class="mt-1 text-3xl font-semibold text-slate-900">{{ script.headline }}</h2>
-
-              <section
-                class="mt-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
-                aria-live="polite"
-              >
-                <div class="flex items-start justify-between gap-4">
-                  <p class="text-sm font-medium text-slate-400">
-                    Step {{ stepIndex + 1 }} of {{ script.steps.length }}
+              <div class="animate-fade-up">
+                @if (activeLabel) {
+                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-calm">
+                    {{ activeLabel }}
                   </p>
-                  @if (voice.canSpeak) {
-                    <button
-                      type="button"
-                      (click)="readStepAloud()"
-                      class="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-sm text-slate-600 hover:bg-slate-50"
-                    >
-                      🔊 Read aloud
-                    </button>
+                }
+                <h1 class="mt-2 text-3xl font-semibold leading-tight tracking-tight text-chalk">
+                  {{ script.headline }}
+                </h1>
+
+                <div class="mt-8 flex items-center gap-3">
+                  @for (dot of script.steps; track $index) {
+                    <span
+                      class="h-1 flex-1 rounded-full transition-colors duration-300"
+                      [class]="$index <= stepIndex ? 'bg-calm' : 'bg-line'"
+                    ></span>
                   }
                 </div>
-                <p class="mt-3 text-2xl leading-relaxed text-slate-900">
-                  {{ script.steps[stepIndex] }}
-                </p>
-              </section>
 
-              @if (stepIndex < script.steps.length - 1) {
-                <button
-                  type="button"
-                  (click)="nextStep()"
-                  class="mt-6 w-full rounded-2xl bg-slate-900 px-6 py-6 text-xl font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                <section
+                  class="mt-5 rounded-2xl border border-line bg-surface/80 p-7 shadow-2xl shadow-black/30"
+                  aria-live="polite"
                 >
-                  I've done this — next
-                </button>
-              } @else {
-                <section class="mt-6 rounded-2xl bg-slate-900 p-8 text-center">
-                  <p class="text-sm font-medium uppercase tracking-wide text-slate-400">
-                    Say this out loud
-                  </p>
-                  <p class="mt-3 text-2xl leading-relaxed text-white">
-                    {{ script.grounding_line }}
+                  <div class="flex items-start justify-between gap-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-mist">
+                      Step {{ stepIndex + 1 }} of {{ script.steps.length }}
+                    </p>
+                    @if (voice.canSpeak) {
+                      <button
+                        type="button"
+                        (click)="readStepAloud()"
+                        class="shrink-0 rounded-lg border border-line px-2.5 py-1 text-xs text-mist transition hover:border-calm/40 hover:text-calm"
+                      >
+                        🔊 Read aloud
+                      </button>
+                    }
+                  </div>
+                  <p class="mt-4 text-2xl leading-relaxed text-chalk">
+                    {{ script.steps[stepIndex] }}
                   </p>
                 </section>
-              }
 
-              @if (profile?.safe_contact_phone) {
-                <a
-                  [href]="'tel:' + profile!.safe_contact_phone"
-                  class="mt-4 flex items-center justify-center gap-3 rounded-2xl bg-emerald-700 px-6 py-4 font-medium text-white hover:bg-emerald-800"
-                >
-                  <span aria-hidden="true">📞</span>
-                  Call {{ profile!.safe_contact_name }}
-                </a>
-              }
+                @if (stepIndex < script.steps.length - 1) {
+                  <button
+                    type="button"
+                    (click)="nextStep()"
+                    class="mt-4 w-full rounded-2xl bg-calm px-6 py-5 text-lg font-semibold text-ink transition hover:bg-calm-dim"
+                  >
+                    Done — what's next
+                  </button>
+                } @else {
+                  <section
+                    class="mt-4 overflow-hidden rounded-2xl border border-calm/25 bg-calm/[0.07] p-7 text-center"
+                  >
+                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-calm">
+                      Say this out loud
+                    </p>
+                    <p class="mt-3 text-2xl leading-relaxed text-chalk">
+                      {{ script.grounding_line }}
+                    </p>
+                    @if (voice.canSpeak) {
+                      <button
+                        type="button"
+                        (click)="voice.speak(script.grounding_line)"
+                        class="mt-5 rounded-lg border border-calm/30 px-3 py-1.5 text-xs text-calm transition hover:bg-calm/10"
+                      >
+                        🔊 Hear it first
+                      </button>
+                    }
+                  </section>
+                }
 
-              <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  (click)="openEducation()"
-                  class="rounded-xl border border-slate-300 px-4 py-3 text-slate-600 hover:bg-white"
-                >
-                  Why is this happening?
-                </button>
-                <button
-                  type="button"
-                  (click)="reset()"
-                  class="rounded-xl border border-slate-300 px-4 py-3 text-slate-600 hover:bg-white"
-                >
-                  Back to start
-                </button>
+                @if (profile?.safe_contact_phone) {
+                  <a
+                    [href]="'tel:' + profile!.safe_contact_phone"
+                    class="mt-4 flex items-center justify-center gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-6 py-4 font-medium text-emerald-300 transition hover:bg-emerald-500/15"
+                  >
+                    <span class="text-lg" aria-hidden="true">📞</span>
+                    Call {{ profile!.safe_contact_name }}
+                  </a>
+                }
+
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    (click)="openEducation()"
+                    class="rounded-xl border border-line bg-surface/50 px-4 py-3.5 text-sm text-mist transition hover:border-line/80 hover:text-chalk"
+                  >
+                    Why is this happening?
+                  </button>
+                  <button
+                    type="button"
+                    (click)="reset()"
+                    class="rounded-xl border border-line bg-surface/50 px-4 py-3.5 text-sm text-mist transition hover:border-line/80 hover:text-chalk"
+                  >
+                    Back to start
+                  </button>
+                </div>
               </div>
             }
           }
 
           @case ('education') {
             @if (loadingEducation) {
-              <div class="flex min-h-72 flex-col items-center justify-center text-center">
-                <div
-                  class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-700"
+              <div class="flex min-h-[24rem] items-center justify-center">
+                <span
+                  class="h-14 w-14 animate-breathe rounded-full border border-calm/30 bg-calm/10"
                   role="status"
                   aria-label="Loading"
-                ></div>
+                ></span>
               </div>
             } @else if (education) {
-              <h2 class="text-3xl font-semibold text-slate-900">{{ education.title }}</h2>
+              <article class="animate-fade-up">
+                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-calm">
+                  Understanding this
+                </p>
+                <h1 class="mt-2 text-3xl font-semibold leading-tight tracking-tight text-chalk">
+                  {{ education.title }}
+                </h1>
 
-              <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-                <p class="text-lg leading-relaxed text-slate-700">
+                <p class="mt-6 text-lg leading-relaxed text-mist">
                   {{ education.why_it_happens }}
                 </p>
 
-                <h3 class="mt-6 text-sm font-medium uppercase tracking-wide text-slate-400">
-                  What helps
-                </h3>
-                <ul class="mt-3 space-y-2">
-                  @for (item of education.what_helps; track item) {
-                    <li class="flex gap-3 text-slate-700">
-                      <span class="text-slate-400" aria-hidden="true">•</span>
-                      <span>{{ item }}</span>
-                    </li>
-                  }
-                </ul>
+                <section class="mt-8 rounded-2xl border border-line bg-surface/70 p-7">
+                  <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-mist">
+                    What helps
+                  </h2>
+                  <ul class="mt-5 space-y-4">
+                    @for (item of education.what_helps; track item) {
+                      <li class="flex gap-4">
+                        <span
+                          class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-calm"
+                          aria-hidden="true"
+                        ></span>
+                        <span class="leading-relaxed text-chalk">{{ item }}</span>
+                      </li>
+                    }
+                  </ul>
+                </section>
 
-                <p class="mt-6 rounded-xl bg-slate-100 p-4 text-slate-700">
+                <p
+                  class="mt-4 rounded-2xl border border-calm/20 bg-calm/[0.06] p-6 leading-relaxed text-chalk"
+                >
                   {{ education.how_long }}
                 </p>
-              </section>
 
-              <button
-                type="button"
-                (click)="backFromEducation()"
-                class="mt-6 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-600 hover:bg-white"
-              >
-                Back
-              </button>
+                <button
+                  type="button"
+                  (click)="backFromEducation()"
+                  class="mt-6 w-full rounded-xl border border-line bg-surface/50 px-4 py-3.5 text-sm text-mist transition hover:border-line/80 hover:text-chalk"
+                >
+                  Back
+                </button>
+              </article>
             } @else if (error) {
-              <p role="alert" class="text-sm text-red-600">{{ error }}</p>
-              <button
-                type="button"
-                (click)="backFromEducation()"
-                class="mt-6 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-600 hover:bg-white"
-              >
-                Back
-              </button>
+              <div class="animate-fade-up">
+                <p
+                  role="alert"
+                  class="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+                >
+                  {{ error }}
+                </p>
+                <button
+                  type="button"
+                  (click)="backFromEducation()"
+                  class="mt-4 w-full rounded-xl border border-line bg-surface/50 px-4 py-3.5 text-sm text-mist transition hover:text-chalk"
+                >
+                  Back
+                </button>
+              </div>
             }
           }
 
           @case ('contact') {
-            <h2 class="text-3xl font-semibold text-slate-900">About you</h2>
-            <p class="mt-2 text-slate-500">
-              Set this while things are calm. Everything here is optional, and it makes the
-              steps you get sound like they were written for you.
-            </p>
+            <div class="animate-fade-up">
+              <h1 class="text-3xl font-semibold tracking-tight text-chalk">About you</h1>
+              <p class="mt-3 leading-relaxed text-mist">
+                All optional, and best done now while things are calm. What you put here makes
+                your steps sound like they were written for you, rather than for anyone.
+              </p>
 
-            <form class="mt-6 space-y-4" (ngSubmit)="saveProfile()">
-              <div>
-                <label for="firstName" class="block text-sm font-medium text-slate-700">
-                  Your first name
-                </label>
-                <input
-                  id="firstName"
-                  name="firstName"
-                  [(ngModel)]="form.first_name"
-                  class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                />
-              </div>
-
-              @if (profile?.role === 'person') {
-                <div>
-                  <label for="sobrietyDate" class="block text-sm font-medium text-slate-700">
-                    Sober since
+              <form class="mt-8 space-y-5" (ngSubmit)="saveProfile()">
+                <div class="rounded-2xl border border-line bg-surface/70 p-6">
+                  <label for="firstName" class="mb-2 block text-sm font-medium text-chalk">
+                    Your first name
                   </label>
                   <input
-                    id="sobrietyDate"
-                    name="sobrietyDate"
-                    type="date"
-                    [(ngModel)]="form.sobriety_start_date"
-                    class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    id="firstName"
+                    name="firstName"
+                    [(ngModel)]="form.first_name"
+                    placeholder="What should we call you?"
+                    class="w-full rounded-xl border border-line bg-ink/70 px-4 py-3 text-chalk placeholder:text-mist/50 transition focus:border-calm/50 focus:outline-none focus:ring-4 focus:ring-calm/10"
                   />
-                  @if (profile?.days_sober !== null && profile?.days_sober !== undefined) {
-                    <p class="mt-1 text-sm text-emerald-700">
-                      {{ profile!.days_sober }} days so far.
-                    </p>
+
+                  @if (profile?.role === 'person') {
+                    <label for="sobrietyDate" class="mb-2 mt-5 block text-sm font-medium text-chalk">
+                      Sober since
+                    </label>
+                    <input
+                      id="sobrietyDate"
+                      name="sobrietyDate"
+                      type="date"
+                      [(ngModel)]="form.sobriety_start_date"
+                      class="w-full rounded-xl border border-line bg-ink/70 px-4 py-3 text-chalk transition [color-scheme:dark] focus:border-calm/50 focus:outline-none focus:ring-4 focus:ring-calm/10"
+                    />
+                    @if (profile?.days_sober !== null && profile?.days_sober !== undefined) {
+                      <p class="mt-2 text-sm text-emerald-300">
+                        {{ profile!.days_sober }} days so far. That counts.
+                      </p>
+                    }
                   }
                 </div>
-              }
 
-              <fieldset class="rounded-xl border border-slate-200 p-4">
-                <legend class="px-1 text-sm font-medium text-slate-700">
-                  Someone you trust
-                </legend>
-                <p class="text-sm text-slate-500">
-                  Reachable in one tap when things are hard, and named in your steps.
-                </p>
+                <div class="rounded-2xl border border-line bg-surface/70 p-6">
+                  <h2 class="text-sm font-medium text-chalk">Someone you trust</h2>
+                  <p class="mt-1 text-sm leading-relaxed text-mist">
+                    One tap away when things are hard, and named by name in your steps.
+                  </p>
 
-                <label for="contactName" class="mt-3 block text-sm font-medium text-slate-700">
-                  Their name
-                </label>
-                <input
-                  id="contactName"
-                  name="contactName"
-                  [(ngModel)]="form.safe_contact_name"
-                  class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                />
+                  <label for="contactName" class="mb-2 mt-5 block text-sm font-medium text-chalk">
+                    Their name
+                  </label>
+                  <input
+                    id="contactName"
+                    name="contactName"
+                    [(ngModel)]="form.safe_contact_name"
+                    class="w-full rounded-xl border border-line bg-ink/70 px-4 py-3 text-chalk placeholder:text-mist/50 transition focus:border-calm/50 focus:outline-none focus:ring-4 focus:ring-calm/10"
+                  />
 
-                <label for="contactPhone" class="mt-3 block text-sm font-medium text-slate-700">
-                  Their phone number
-                </label>
-                <input
-                  id="contactPhone"
-                  name="contactPhone"
-                  type="tel"
-                  [(ngModel)]="form.safe_contact_phone"
-                  class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                />
-              </fieldset>
+                  <label for="contactPhone" class="mb-2 mt-5 block text-sm font-medium text-chalk">
+                    Their phone number
+                  </label>
+                  <input
+                    id="contactPhone"
+                    name="contactPhone"
+                    type="tel"
+                    [(ngModel)]="form.safe_contact_phone"
+                    class="w-full rounded-xl border border-line bg-ink/70 px-4 py-3 text-chalk placeholder:text-mist/50 transition focus:border-calm/50 focus:outline-none focus:ring-4 focus:ring-calm/10"
+                  />
+                </div>
 
-              @if (error) {
-                <p role="alert" class="text-sm text-red-600">{{ error }}</p>
-              }
+                @if (error) {
+                  <p
+                    role="alert"
+                    class="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+                  >
+                    {{ error }}
+                  </p>
+                }
 
-              <button
-                type="submit"
-                [disabled]="savingProfile"
-                class="w-full rounded-lg bg-slate-900 px-4 py-2.5 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-              >
-                {{ savingProfile ? 'Saving…' : 'Save' }}
-              </button>
-            </form>
-
-            <button
-              type="button"
-              (click)="reset()"
-              class="mt-4 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-600 hover:bg-white"
-            >
-              Back
-            </button>
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="submit"
+                    [disabled]="savingProfile"
+                    class="rounded-xl bg-calm px-4 py-3.5 font-semibold text-ink transition hover:bg-calm-dim disabled:opacity-50 sm:order-2"
+                  >
+                    {{ savingProfile ? 'Saving…' : 'Save' }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="reset()"
+                    class="rounded-xl border border-line bg-surface/50 px-4 py-3.5 text-sm text-mist transition hover:text-chalk sm:order-1"
+                  >
+                    Back
+                  </button>
+                </div>
+              </form>
+            </div>
           }
         }
-      </div>
-    </main>
+      </main>
+    </div>
   `,
 })
 export class CrisisComponent implements OnInit {
@@ -377,7 +498,11 @@ export class CrisisComponent implements OnInit {
   }
 
   icon(code: string): string {
-    return CATEGORY_ICONS[code] ?? '•';
+    return CATEGORY_STYLE[code]?.icon ?? '•';
+  }
+
+  tint(code: string): string {
+    return CATEGORY_STYLE[code]?.tint ?? 'group-hover:border-calm/40';
   }
 
   startRecording(): void {
@@ -387,7 +512,7 @@ export class CrisisComponent implements OnInit {
       .record()
       .then((recording) => this.sendRecording(recording))
       .catch(() => {
-        this.error = 'I could not use the microphone. Tap one below instead.';
+        this.error = 'I could not reach the microphone. Tap one below instead.';
       });
   }
 
@@ -412,8 +537,8 @@ export class CrisisComponent implements OnInit {
         this.view = 'categories';
         this.error =
           err.status === 422
-            ? "I couldn't make that out. Try again, or tap one below."
-            : 'Could not prepare your steps right now. Please try again.';
+            ? "I couldn't quite make that out. Try again, or tap one below."
+            : (err.error?.error ?? 'Could not prepare your steps right now. Please try again.');
       },
     });
   }
@@ -431,9 +556,9 @@ export class CrisisComponent implements OnInit {
         this.stepIndex = 0;
         this.view = 'script';
       },
-      error: () => {
+      error: (err) => {
         this.view = 'categories';
-        this.error = 'Could not prepare your steps right now. Please try again.';
+        this.error = err.error?.error ?? 'Could not prepare your steps right now. Please try again.';
       },
     });
   }
@@ -476,7 +601,7 @@ export class CrisisComponent implements OnInit {
     this.view = this.script ? 'script' : 'categories';
   }
 
-  openContactSetup(): void {
+  openProfile(): void {
     this.voice.stopSpeaking();
     this.error = '';
     this.view = 'contact';
