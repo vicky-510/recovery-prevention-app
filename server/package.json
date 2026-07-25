@@ -1,8 +1,13 @@
 {
   "name": "recovery-server",
   "version": "1.0.0",
+  "description": "API for Steady: zero-typing crisis support generated with Gemini.",
+  "license": "MIT",
   "type": "module",
   "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",

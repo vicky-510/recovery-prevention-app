@@ -1,6 +1,11 @@
 {
   "name": "recovery-client",
   "version": "1.0.0",
+  "description": "Steady: zero-typing crisis support for substance use recovery.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "ng serve",
     "prebuild": "node scripts/set-api-url.mjs",

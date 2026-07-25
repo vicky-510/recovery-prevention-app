@@ -27,6 +27,13 @@ const CATEGORY_STYLE: Record<string, { icon: string; tint: string }> = {
   imports: [FormsModule],
   template: `
     <div class="min-h-screen">
+      <a
+        href="#main"
+        class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-20 focus:rounded-lg focus:bg-calm focus:px-4 focus:py-2 focus:font-medium focus:text-ink"
+      >
+        Skip to content
+      </a>
+
       <header class="sticky top-0 z-10 border-b border-line/60 bg-ink/80 backdrop-blur-xl">
         <div class="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
           <button
@@ -61,7 +68,7 @@ const CATEGORY_STYLE: Record<string, { icon: string; tint: string }> = {
         </div>
       </header>
 
-      <main class="mx-auto max-w-3xl px-5 pb-16 pt-10">
+      <main id="main" class="mx-auto max-w-3xl px-5 pb-16 pt-10">
         @switch (view) {
           @case ('categories') {
             <div class="animate-fade-up">
