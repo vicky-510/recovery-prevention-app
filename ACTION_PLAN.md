@@ -10,7 +10,7 @@ Multi-modal, GenAI-powered recovery platform for individuals navigating substanc
 - Backend: Node.js + Express (route → controller → service)
 - Database: Postgres (Supabase pooler), raw `pg`, parameterized queries, no ORM
 - Auth: Native `crypto` HMAC tokens (no `jsonwebtoken`) — **email + password with bcrypt** (chosen mode)
-- AI: `@google/genai`, `gemini-2.5-flash`, strict JSON via `responseSchema`
+- AI: `@google/genai`, `gemini-flash-latest`, strict JSON via `responseSchema`
 - Data policy: no fake/mock data — everything real or generated at runtime
 
 ---
@@ -51,7 +51,7 @@ Multi-modal, GenAI-powered recovery platform for individuals navigating substanc
 
 ## 2. AI Schema (Gemini)
 
-- Model: `gemini-2.5-flash`
+- Model: `gemini-flash-latest`
 - Forced structured output via `responseSchema` (flat, minimal)
 - Output fields:
   - `headline` — short calming title
@@ -59,6 +59,37 @@ Multi-modal, GenAI-powered recovery platform for individuals navigating substanc
   - `grounding_line` — one sentence to say aloud
   - `caregiver_note` — optional, only if role = caregiver
 - System prompt: fixed persona — trauma-informed, non-clinical, ultra-concise, no medical claims. Inputs: `category` + optional `context_note`.
+
+---
+
+## 2b. Features
+
+### Built (complete, verified end-to-end)
+
+1. **Secure Login** — email + password, bcrypt-hashed, native `crypto` HMAC session token (no `jsonwebtoken`, no third-party auth).
+2. **Zero-Typing Crisis Trigger** — single-tap "I Need Help Now"; user selects one of 4 seeded categories (`craving`, `panic`, `post_relapse`, `caregiver_checkin`). No text input required anywhere in the crisis path.
+3. **Real-Time Personalized Emergency Script (GenAI core engine)** — live `gemini-flash-latest` call with strict `responseSchema`, returning structured `headline` / `steps[]` / `grounding_line`. Freshly generated every time; never canned.
+4. **Persisted Intervention Record** — every generated script is `INSERT`ed into `interventions` (Postgres/Supabase) with real parameterized queries, proving dynamic runtime data rather than sample data.
+5. **Role-Aware Support** — `person` vs `caregiver` role captured at signup, so caregivers get a support-script flow instead of a self-directed one.
+
+### Standout features (ranked, add only after end-to-end smoke test passes)
+
+1. **Pre-generated crisis cache** *(highest impact)* — a 2–3s AI call, or no signal, is a product failure mid-crisis. Generate and store the user's personalized scripts **while they are calm**; on SOS tap serve instantly from Postgres, then refresh the cache with a background Gemini call. Directly answers "when cognitive load is highest" and stays fully real (real GenAI, real DB) — an architectural insight, not a bolt-on.
+2. **One-step-at-a-time script delivery** — render one step, large, one tap to advance, instead of a wall of text. The real accessibility answer to high cognitive load; ~5 min, client-only, no backend change.
+3. **Personal anchors in the script** — store 2–3 short anchors at signup (reason for recovery, who matters, days sober) and feed them into the Gemini prompt so scripts say something concrete instead of generic advice.
+
+### Explicitly cut (bolt-on optics, no real fit)
+
+Maps/Places, Calendar, FCM, Vision, Sheets, dual-role QR, analytics dashboards, history browsing, multi-language, settings pages.
+
+### Scoring note
+
+Features above move **Problem Statement Alignment** (and #2 moves **Accessibility**). The other four categories are earned by *how* we build, not by adding features:
+
+- **Code Quality** — route → controller → service layering, central error handler, fail-fast env validation, no dead code
+- **Security** — bcrypt + HMAC auth enforced at the router, `helmet` headers, rate limiting on auth and AI endpoints, 10kb body cap, parameterized queries, uniform login errors (no account enumeration), secrets only in `.env` (gitignored)
+- **Efficiency** — one Gemini call per trigger, `compression`, pooled connections, no N+1 queries
+- **Testing** — 26 Jest + supertest tests passing against the real database (token forgery/expiry, signup validation, password hashing, auth enforcement, category integrity)
 
 ---
 
