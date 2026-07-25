@@ -47,6 +47,52 @@ const SCRIPT_SCHEMA = {
   required: ['headline', 'steps', 'grounding_line'],
 };
 
+/**
+ * The audio path asks the model to classify and respond in one pass. Splitting
+ * it into transcribe-then-generate would discard exactly what makes speech
+ * worth sending: pace, breathing, and distress that a transcript flattens out.
+ */
+const VOICE_SCRIPT_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    understood: {
+      type: Type.BOOLEAN,
+      description: 'False if the audio is silent, unintelligible, or unrelated to distress.',
+    },
+    heard: {
+      type: Type.STRING,
+      description:
+        'Word for word, what the speaker actually said. Empty string if the audio contains no speech.',
+    },
+    detected_category: {
+      type: Type.STRING,
+      enum: ['craving', 'panic', 'post_relapse', 'caregiver_checkin'],
+      description: 'The situation the speaker is describing.',
+    },
+    headline: {
+      type: Type.STRING,
+      description: 'One short, calming sentence acknowledging the moment.',
+    },
+    steps: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: 'Three or four immediate actions, one sentence each.',
+    },
+    grounding_line: {
+      type: Type.STRING,
+      description: 'One reassuring sentence for the reader to say out loud.',
+    },
+  },
+  required: ['understood', 'heard', 'detected_category', 'headline', 'steps', 'grounding_line'],
+};
+
+/**
+ * Asked only for a self-report, the model will call silence a craving and
+ * produce a confident script for it. Requiring it to quote what it heard gives
+ * something checkable instead.
+ */
+const MIN_HEARD_CHARACTERS = 8;
+
 const EDUCATION_SCHEMA = {
   type: Type.OBJECT,
   properties: {
@@ -128,6 +174,26 @@ export function buildEducationTopic(categoryCode, role) {
   return forRole[categoryCode] ?? `what happens during: ${categoryCode}`;
 }
 
+/** Exported for testing: the instruction wrapped around a voice note. */
+export function buildVoicePrompt(role, localHour, profile) {
+  const lines = [
+    normaliseRole(role) === 'caregiver'
+      ? 'The speaker is a caregiver describing what someone they care for is going through.'
+      : 'The speaker is describing what they are going through right now.',
+    'Listen to how they sound, not only to the words, and decide which situation this is.',
+    'Quote what they actually said in "heard". If there is no speech in the audio, leave it empty and set understood to false.',
+    'Never invent speech that is not there. Silence is not a craving.',
+  ];
+
+  const time = describeTimeOfDay(localHour);
+  if (time) lines.push(time);
+
+  const anchors = buildAnchors({ ...profile, role: normaliseRole(role) });
+  if (anchors) lines.push('', anchors);
+
+  return lines.join('\n');
+}
+
 async function generateJson({ systemInstruction, contents, responseSchema, temperature }) {
   const response = await ai.models.generateContent({
     model: MODEL,
@@ -161,6 +227,43 @@ export async function generateScript(categoryCode, role, localHour, profile) {
     throw new Error('Gemini returned a script with no steps.');
   }
 
+  return script;
+}
+
+/**
+ * Sends the recording itself to Gemini. Returns `{ understood: false }` when the
+ * model could not make sense of it, so the caller can fall back to tapping
+ * rather than acting on a guess.
+ */
+export async function generateScriptFromAudio({ audioBase64, mimeType, role, localHour, profile }) {
+  const result = await generateJson({
+    systemInstruction: SCRIPT_SYSTEM_PROMPT,
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType, data: audioBase64 } },
+          { text: buildVoicePrompt(role, localHour, profile) },
+        ],
+      },
+    ],
+    responseSchema: VOICE_SCRIPT_SCHEMA,
+    temperature: 0.4,
+  });
+
+  // The transcript is only used to confirm there was speech; it is never
+  // stored, because what someone says mid-crisis is not ours to keep.
+  const heard = typeof result.heard === 'string' ? result.heard.trim() : '';
+
+  if (!result.understood || heard.length < MIN_HEARD_CHARACTERS) {
+    return { understood: false };
+  }
+
+  if (!Array.isArray(result.steps) || result.steps.length === 0) {
+    throw new Error('Gemini returned a script with no steps.');
+  }
+
+  const { heard: _discarded, ...script } = result;
   return script;
 }
 

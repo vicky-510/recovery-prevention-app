@@ -39,6 +39,7 @@ export interface Script {
 
 export interface Intervention {
   id: string;
+  category_code?: string;
   script_json: Script;
   created_at: string;
 }

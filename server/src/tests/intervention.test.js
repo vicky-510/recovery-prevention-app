@@ -54,6 +54,56 @@ describe('GET /api/interventions/categories', () => {
   });
 });
 
+describe('POST /api/interventions/voice validation', () => {
+  // These reject before reaching Gemini, so they cost no API quota.
+  const wav = Buffer.alloc(2048).toString('base64');
+
+  it('rejects a request without a token', async () => {
+    expect((await request(app).post('/api/interventions/voice')).status).toBe(401);
+  });
+
+  it('rejects a missing recording with 400', async () => {
+    const res = await request(app)
+      .post('/api/interventions/voice')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ mime_type: 'audio/wav' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it.each(['application/pdf', 'text/plain', 'image/png', '', undefined])(
+    'rejects the non-audio type %s with 400',
+    async (mimeType) => {
+      const res = await request(app)
+        .post('/api/interventions/voice')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ audio_base64: wav, mime_type: mimeType });
+
+      expect(res.status).toBe(400);
+    }
+  );
+
+  it('accepts a codec suffix on the media type', async () => {
+    const res = await request(app)
+      .post('/api/interventions/voice')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ audio_base64: wav, mime_type: 'audio/webm;codecs=opus', local_hour: 'noon' });
+
+    // Rejected for the bad hour, proving the media type itself passed.
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/local_hour/);
+  });
+
+  it('rejects a recording that is too large with 413', async () => {
+    const res = await request(app)
+      .post('/api/interventions/voice')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ audio_base64: 'A'.repeat(4 * 1024 * 1024 + 1), mime_type: 'audio/wav' });
+
+    expect(res.status).toBe(413);
+  });
+});
+
 describe('POST /api/interventions validation', () => {
   // These reject before reaching Gemini, so they cost no API quota.
   it('rejects a missing category_code with 400', async () => {

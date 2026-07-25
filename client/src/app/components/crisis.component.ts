@@ -2,8 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../core/auth.service';
-import { VoiceService } from '../core/voice.service';
-import { matchCategory } from '../core/category-match';
+import { Recording, VoiceService } from '../core/voice.service';
 import { Category, EducationNote, Profile, ProfileUpdate, Script } from '../models';
 
 type View = 'categories' | 'generating' | 'script' | 'education' | 'contact';
@@ -52,16 +51,27 @@ const CATEGORY_ICONS: Record<string, string> = {
               <p role="alert" class="mt-4 text-sm text-red-600">{{ error }}</p>
             }
 
-            @if (voice.canListen) {
+            @if (voice.canRecord) {
               <button
                 type="button"
-                (click)="startListening()"
-                [disabled]="voice.listening()"
-                class="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white px-6 py-5 text-lg font-medium text-slate-700 hover:border-slate-400 disabled:opacity-70"
+                (click)="voice.recording() ? finishRecording() : startRecording()"
+                class="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl px-6 py-5 text-lg font-medium transition"
+                [class]="
+                  voice.recording()
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'border-2 border-dashed border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                "
               >
-                <span class="text-2xl" aria-hidden="true">{{ voice.listening() ? '🔴' : '🎙️' }}</span>
-                {{ voice.listening() ? 'Listening — say what you need' : 'Or speak instead of tapping' }}
+                <span class="text-2xl" aria-hidden="true">{{ voice.recording() ? '⏹️' : '🎙️' }}</span>
+                {{
+                  voice.recording()
+                    ? "Listening — tap when you're done"
+                    : "Or just say it — I'll listen"
+                }}
               </button>
+              <p class="mt-2 text-center text-sm text-slate-400">
+                You don't need to pick a category. Say whatever comes out.
+              </p>
             }
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
@@ -370,28 +380,45 @@ export class CrisisComponent implements OnInit {
     return CATEGORY_ICONS[code] ?? '•';
   }
 
-  startListening(): void {
+  startRecording(): void {
     this.error = '';
 
     this.voice
-      .listen()
-      .then((heard) => {
-        const code = matchCategory(heard, this.categories);
-        const category = this.categories.find((c) => c.code === code);
-
-        if (category) {
-          this.trigger(category);
-        } else {
-          this.error = "I didn't catch that. Try again, or tap one below.";
-        }
-      })
+      .record()
+      .then((recording) => this.sendRecording(recording))
       .catch(() => {
-        this.error = "I couldn't hear anything. Tap one below instead.";
+        this.error = 'I could not use the microphone. Tap one below instead.';
       });
   }
 
+  finishRecording(): void {
+    this.voice.stopRecording();
+  }
+
+  private sendRecording({ base64, mimeType }: Recording): void {
+    this.view = 'generating';
+    this.education = null;
+
+    this.api.createInterventionFromVoice(base64, mimeType).subscribe({
+      next: (intervention) => {
+        this.script = intervention.script_json;
+        this.activeCategory = intervention.category_code ?? null;
+        this.activeLabel =
+          this.categories.find((c) => c.code === intervention.category_code)?.label ?? '';
+        this.stepIndex = 0;
+        this.view = 'script';
+      },
+      error: (err) => {
+        this.view = 'categories';
+        this.error =
+          err.status === 422
+            ? "I couldn't make that out. Try again, or tap one below."
+            : 'Could not prepare your steps right now. Please try again.';
+      },
+    });
+  }
+
   trigger(category: Category): void {
-    this.voice.stopListening();
     this.view = 'generating';
     this.activeCategory = category.code;
     this.activeLabel = category.label;

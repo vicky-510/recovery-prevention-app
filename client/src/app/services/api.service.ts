@@ -50,6 +50,15 @@ export class ApiService {
     });
   }
 
+  /** Sends the recording itself; Gemini decides what the moment is. */
+  createInterventionFromVoice(audioBase64: string, mimeType: string): Observable<Intervention> {
+    return this.http.post<Intervention>('/api/interventions/voice', {
+      audio_base64: audioBase64,
+      mime_type: mimeType,
+      local_hour: new Date().getHours(),
+    });
+  }
+
   education(categoryCode: string): Observable<EducationNote> {
     return this.http.get<EducationNote>(`/api/education/${categoryCode}`);
   }

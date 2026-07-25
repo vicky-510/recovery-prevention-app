@@ -1,4 +1,8 @@
-import { buildEducationTopic, buildSituation } from '../services/gemini.service.js';
+import {
+  buildEducationTopic,
+  buildSituation,
+  buildVoicePrompt,
+} from '../services/gemini.service.js';
 
 const CATEGORIES = ['craving', 'panic', 'post_relapse', 'caregiver_checkin'];
 
@@ -33,6 +37,37 @@ describe('buildSituation', () => {
 
   it('still produces a usable line for an unknown category', () => {
     expect(buildSituation('meteor_strike', 'person')).toContain('meteor_strike');
+  });
+});
+
+describe('buildVoicePrompt', () => {
+  it('frames the speaker as the person themselves by default', () => {
+    expect(buildVoicePrompt('person')).toMatch(/they are going through/);
+  });
+
+  it('frames a caregiver as speaking about someone else', () => {
+    expect(buildVoicePrompt('caregiver')).toMatch(/someone they care for/);
+  });
+
+  it('asks the model to attend to how they sound, not only the words', () => {
+    expect(buildVoicePrompt('person')).toMatch(/how they sound/);
+  });
+
+  // Silence once produced a confident craving script, so this is pinned.
+  it('forbids inventing speech that is not in the audio', () => {
+    const prompt = buildVoicePrompt('person');
+    expect(prompt).toMatch(/Silence is not a craving/);
+    expect(prompt).toMatch(/understood to false/);
+  });
+
+  it('carries the time of day through', () => {
+    expect(buildVoicePrompt('person', 3)).toMatch(/middle of the night/);
+  });
+
+  it('carries personal anchors through', () => {
+    const prompt = buildVoicePrompt('person', 14, { firstName: 'John', safeContactName: 'Rahul' });
+    expect(prompt).toContain('John');
+    expect(prompt).toContain('Rahul');
   });
 });
 
