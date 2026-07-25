@@ -78,9 +78,6 @@ Multi-modal, GenAI-powered recovery platform for individuals navigating substanc
 2. **One-step-at-a-time script delivery** — render one step, large, one tap to advance, instead of a wall of text. The real accessibility answer to high cognitive load; ~5 min, client-only, no backend change.
 3. **Personal anchors in the script** — store 2–3 short anchors at signup (reason for recovery, who matters, days sober) and feed them into the Gemini prompt so scripts say something concrete instead of generic advice.
 
-### Explicitly cut (bolt-on optics, no real fit)
-
-Maps/Places, Calendar, FCM, Vision, Sheets, dual-role QR, analytics dashboards, history browsing, multi-language, settings pages.
 
 ### Scoring note
 
@@ -138,11 +135,3 @@ Login → tap "I need help now" → tap/say `craving` → Gemini generates a rea
 - **P1 (~10m):** Angular + Express scaffold, DB migration SQL, `pg` pool connection, auth routes skeleton
 - **P2 (~25m):** bcrypt + HMAC auth logic, Gemini service with `responseSchema`, interventions route wired end-to-end
 - **P3 (~25m):** Angular UI (single-screen tap interface + Web Speech), wire to API, live smoke test
-
----
-
-## Scoring Alignment Reminder
-- **High Impact:** Code Quality, Problem Statement Alignment
-- **Medium Impact:** Security, Efficiency
-- **Low Impact:** Testing, Accessibility
-- **Disqualifiers to avoid:** static/hardcoded pages, mock/fake data, hallucinated AI responses, false positives (demo-only features). Every demoed feature must run end-to-end with a real Gemini call.
