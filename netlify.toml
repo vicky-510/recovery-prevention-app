@@ -1,0 +1,12 @@
+[build]
+  base = "client"
+  command = "npm ci && npm run build"
+  publish = "dist/client/browser"
+
+# Angular routes are resolved in the browser, so every path serves the shell.
+# API calls are not routed through here: they go straight to the backend, since
+# this proxy would time out at 26 seconds and a cold start can take longer.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

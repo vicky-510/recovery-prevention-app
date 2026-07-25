@@ -15,6 +15,7 @@ Steady targets a single moment: the minutes during a craving, a panic spiral, or
 - [Setup](#setup)
 - [Running the application](#running-the-application)
 - [Testing](#testing)
+- [Deployment](#deployment)
 - [API reference](#api-reference)
 - [Project structure](#project-structure)
 - [Design notes](#design-notes)
@@ -111,6 +112,7 @@ Fill in `server/.env`:
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `HMAC_SECRET` | Random string used to sign session tokens |
 | `PORT` | Port for the API (defaults to `3000`) |
+| `CORS_ORIGINS` | Optional. Comma-separated origins allowed to call the API. Leave unset locally; name the deployed frontend in production |
 
 Generate a strong signing secret:
 
@@ -118,7 +120,7 @@ Generate a strong signing secret:
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
-All four variables are validated at startup. A missing one stops the process with a message naming it, rather than failing later at the first request.
+The first four are validated at startup. A missing one stops the process with a message naming it, rather than failing later at the first request.
 
 > If your database password contains reserved URL characters (`@ : / ? # & %`), percent-encode them within the connection string.
 
@@ -180,6 +182,38 @@ The fixture is committed. To regenerate it:
 ```bash
 cd server && node scripts/make-audio-fixture.mjs
 ```
+
+---
+
+## Deployment
+
+The two halves deploy independently. The browser calls the API directly rather than through a host-level redirect, because a static host's proxy typically times out well before a cold start on a free tier completes.
+
+### API
+
+Any Node host works. Set `DATABASE_URL`, `GEMINI_API_KEY`, `HMAC_SECRET`, and `CORS_ORIGINS` in its environment, and start with `npm start`. The schema is applied on boot, so no separate release step is needed.
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `server` |
+| Build command | `npm ci` |
+| Start command | `npm start` |
+
+Set `CORS_ORIGINS` to the deployed frontend's origin. Left unset, the API accepts requests from any origin.
+
+Free tiers commonly idle out after a period without traffic, and the next request pays a cold start of up to a minute.
+
+### Frontend
+
+`netlify.toml` at the repository root carries the build settings and the rewrite that lets client-side routing resolve. The production build substitutes `src/environments/environment.prod.ts`, which holds the API's URL — update it when the API moves.
+
+| Setting | Value |
+| --- | --- |
+| Base directory | `client` |
+| Build command | `npm ci && npm run build` |
+| Publish directory | `dist/client/browser` |
+
+Recording requires a secure context, so the deployed site must be served over HTTPS for voice input to work. Both hosts above provide this by default.
 
 ---
 

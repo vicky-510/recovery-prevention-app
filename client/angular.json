@@ -19,15 +19,40 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [],
             "styles": []
-          }
+          },
+          "configurations": {
+            "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "optimization": true,
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "buildTarget": "client:build",
             "proxyConfig": "proxy.conf.json",
             "port": 4200
-          }
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "client:build:production"
+            },
+            "development": {
+              "buildTarget": "client:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
         }
       }
     }

@@ -14,4 +14,11 @@ export const env = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   HMAC_SECRET: process.env.HMAC_SECRET,
   PORT: Number(process.env.PORT) || 3000,
+
+  // Comma-separated list of allowed origins. Unset means allow any, which is
+  // convenient locally; a deployment should name its frontend explicitly.
+  CORS_ORIGINS: (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 };

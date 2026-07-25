@@ -6,13 +6,17 @@ import authRoutes from './routes/auth.routes.js';
 import interventionRoutes from './routes/intervention.routes.js';
 import educationRoutes from './routes/education.routes.js';
 import userRoutes from './routes/user.routes.js';
+import { env } from './config/env.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 export const app = express();
 
 app.use(helmet());
 app.use(compression());
-app.use(cors());
+
+// With CORS_ORIGINS unset every origin is allowed, which suits local work. Set
+// it in a deployment so only the deployed frontend can call the API.
+app.use(cors(env.CORS_ORIGINS.length > 0 ? { origin: env.CORS_ORIGINS } : {}));
 
 // Every route but one carries a small JSON body. The voice route carries a
 // recording, so it is skipped here and parses with its own larger cap rather
