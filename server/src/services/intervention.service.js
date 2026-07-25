@@ -12,12 +12,17 @@ export async function categoryExists(code) {
 }
 
 /**
- * Generates a script with Gemini and records it. A generation failure propagates
- * rather than falling back to canned text — a fabricated script is worse than
- * an honest error for someone in crisis.
+ * Generates a script for this user's role and records it. A generation failure
+ * propagates rather than falling back to canned text — a fabricated script is
+ * worse than an honest error for someone in crisis.
  */
 export async function createIntervention(userId, categoryCode) {
-  const script = await generateScript(categoryCode);
+  const { rows: userRows } = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+  if (userRows.length === 0) {
+    throw Object.assign(new Error('User no longer exists.'), { status: 401 });
+  }
+
+  const script = await generateScript(categoryCode, userRows[0].role);
 
   const { rows } = await pool.query(
     `INSERT INTO interventions (user_id, category_code, script_json)

@@ -70,7 +70,7 @@ Multi-modal, GenAI-powered recovery platform for individuals navigating substanc
 2. **Zero-Typing Crisis Trigger** — single-tap "I Need Help Now"; user selects one of 4 seeded categories (`craving`, `panic`, `post_relapse`, `caregiver_checkin`). No text input required anywhere in the crisis path.
 3. **Real-Time Personalized Emergency Script (GenAI core engine)** — live `gemini-flash-latest` call with strict `responseSchema`, returning structured `headline` / `steps[]` / `grounding_line`. Freshly generated every time; never canned.
 4. **Persisted Intervention Record** — every generated script is `INSERT`ed into `interventions` (Postgres/Supabase) with real parameterized queries, proving dynamic runtime data rather than sample data.
-5. **Role-Aware Support** — `person` vs `caregiver` role captured at signup, so caregivers get a support-script flow instead of a self-directed one.
+5. **Role-Aware Scripts** — the `person` / `caregiver` role chosen at signup is read on every trigger and changes the prompt, so the same category yields a different script for each. A person gets self-directed physical actions; a caregiver gets actions to take for someone else plus words to say to them.
 
 ### Standout features (ranked, add only after end-to-end smoke test passes)
 
@@ -89,7 +89,7 @@ Features above move **Problem Statement Alignment** (and #2 moves **Accessibilit
 - **Code Quality** — route → controller → service layering, central error handler, fail-fast env validation, no dead code
 - **Security** — bcrypt + HMAC auth enforced at the router, `helmet` headers, rate limiting on auth and AI endpoints, 10kb body cap, parameterized queries, uniform login errors (no account enumeration), secrets only in `.env` (gitignored)
 - **Efficiency** — one Gemini call per trigger, `compression`, pooled connections, no N+1 queries
-- **Testing** — 26 Jest + supertest tests passing against the real database (token forgery/expiry, signup validation, password hashing, auth enforcement, category integrity)
+- **Testing** — 39 Jest + supertest tests passing against the real database (token forgery/expiry, signup validation, password hashing, auth enforcement, category integrity, role-specific prompt construction)
 
 ---
 

@@ -12,8 +12,9 @@ Given a situation, produce a short emergency script the reader can follow while 
 Rules:
 - Plain, concrete language. No jargon, no clinical terms, no diagnoses, no medical advice.
 - Never shame, moralise, or warn about consequences.
-- Each step must be a single physical action that can be done immediately, alone, in under a minute.
-- The grounding line is spoken aloud by the reader, in the second person, and must be reassuring rather than instructive.`;
+- Each step must be a single action that can be done immediately and alone, in under a minute.
+- Address the reader as "you", and refer to whoever they are helping in the third person.
+- The grounding line is a sentence the reader says out loud, and must reassure rather than instruct.`;
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
@@ -25,7 +26,7 @@ const RESPONSE_SCHEMA = {
     steps: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: 'Three or four immediate physical actions, one sentence each.',
+      description: 'Three or four immediate actions, one sentence each.',
     },
     grounding_line: {
       type: Type.STRING,
@@ -35,19 +36,35 @@ const RESPONSE_SCHEMA = {
   required: ['headline', 'steps', 'grounding_line'],
 };
 
-const CATEGORY_SITUATIONS = {
-  craving: 'The reader is feeling a strong urge to use right now.',
-  panic: 'The reader is in an acute panic or anxiety spiral.',
-  post_relapse: 'The reader has just relapsed and needs steadying without judgement.',
-  caregiver_checkin: 'The reader is a caregiver who needs words to support someone they love.',
+/**
+ * A caregiver and the person themselves face the same moment from opposite
+ * sides, so the same category has to yield a different script for each.
+ */
+const SITUATIONS = {
+  person: {
+    craving: 'You are feeling a strong urge to use right now.',
+    panic: 'You are in an acute panic or anxiety spiral.',
+    post_relapse: 'You have just relapsed and need steadying, without judgement.',
+    caregiver_checkin: 'You want to check in on someone you are supporting.',
+  },
+  caregiver: {
+    craving: 'Someone you care for is fighting a strong urge to use right now. Give the reader actions to take and words to say to them.',
+    panic: 'Someone you care for is in an acute panic spiral. Give the reader actions to take and words to say to them.',
+    post_relapse: 'Someone you care for has just relapsed. Give the reader actions to take and words to say that carry no judgement.',
+    caregiver_checkin: 'You are checking in on someone you care for, and need words that open a conversation without pressure.',
+  },
 };
 
-export async function generateScript(categoryCode) {
-  const situation = CATEGORY_SITUATIONS[categoryCode] ?? `Situation: ${categoryCode}.`;
+/** Exported for testing: builds the situation line sent to the model. */
+export function buildSituation(categoryCode, role) {
+  const forRole = SITUATIONS[role] ?? SITUATIONS.person;
+  return forRole[categoryCode] ?? `Situation: ${categoryCode}.`;
+}
 
+export async function generateScript(categoryCode, role) {
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: `${situation}\n\nWrite the emergency script now.`,
+    contents: `${buildSituation(categoryCode, role)}\n\nWrite the emergency script now.`,
     config: {
       systemInstruction: SYSTEM_PROMPT,
       responseMimeType: 'application/json',
