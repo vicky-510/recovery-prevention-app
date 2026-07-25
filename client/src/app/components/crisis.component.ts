@@ -4,7 +4,7 @@ import { ApiService } from '../services/api.service';
 import { AuthService } from '../core/auth.service';
 import { VoiceService } from '../core/voice.service';
 import { matchCategory } from '../core/category-match';
-import { Category, EducationNote, Profile, Script } from '../models';
+import { Category, EducationNote, Profile, ProfileUpdate, Script } from '../models';
 
 type View = 'categories' | 'generating' | 'script' | 'education' | 'contact';
 
@@ -30,7 +30,7 @@ const CATEGORY_ICONS: Record<string, string> = {
             (click)="openContactSetup()"
             class="text-sm text-slate-500 hover:text-slate-700 hover:underline"
           >
-            Safe contact
+            About you
           </button>
           <button
             type="button"
@@ -231,34 +231,74 @@ const CATEGORY_ICONS: Record<string, string> = {
           }
 
           @case ('contact') {
-            <h2 class="text-3xl font-semibold text-slate-900">Your safe contact</h2>
+            <h2 class="text-3xl font-semibold text-slate-900">About you</h2>
             <p class="mt-2 text-slate-500">
-              One person you can reach in a single tap. Set this now, while things are calm.
+              Set this while things are calm. Everything here is optional, and it makes the
+              steps you get sound like they were written for you.
             </p>
 
-            <form class="mt-6 space-y-4" (ngSubmit)="saveContact()">
+            <form class="mt-6 space-y-4" (ngSubmit)="saveProfile()">
               <div>
-                <label for="contactName" class="block text-sm font-medium text-slate-700">Name</label>
+                <label for="firstName" class="block text-sm font-medium text-slate-700">
+                  Your first name
+                </label>
                 <input
-                  id="contactName"
-                  name="contactName"
-                  [(ngModel)]="contactName"
+                  id="firstName"
+                  name="firstName"
+                  [(ngModel)]="form.first_name"
                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </div>
 
-              <div>
-                <label for="contactPhone" class="block text-sm font-medium text-slate-700">
-                  Phone number
+              @if (profile?.role === 'person') {
+                <div>
+                  <label for="sobrietyDate" class="block text-sm font-medium text-slate-700">
+                    Sober since
+                  </label>
+                  <input
+                    id="sobrietyDate"
+                    name="sobrietyDate"
+                    type="date"
+                    [(ngModel)]="form.sobriety_start_date"
+                    class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  />
+                  @if (profile?.days_sober !== null && profile?.days_sober !== undefined) {
+                    <p class="mt-1 text-sm text-emerald-700">
+                      {{ profile!.days_sober }} days so far.
+                    </p>
+                  }
+                </div>
+              }
+
+              <fieldset class="rounded-xl border border-slate-200 p-4">
+                <legend class="px-1 text-sm font-medium text-slate-700">
+                  Someone you trust
+                </legend>
+                <p class="text-sm text-slate-500">
+                  Reachable in one tap when things are hard, and named in your steps.
+                </p>
+
+                <label for="contactName" class="mt-3 block text-sm font-medium text-slate-700">
+                  Their name
+                </label>
+                <input
+                  id="contactName"
+                  name="contactName"
+                  [(ngModel)]="form.safe_contact_name"
+                  class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+
+                <label for="contactPhone" class="mt-3 block text-sm font-medium text-slate-700">
+                  Their phone number
                 </label>
                 <input
                   id="contactPhone"
                   name="contactPhone"
                   type="tel"
-                  [(ngModel)]="contactPhone"
+                  [(ngModel)]="form.safe_contact_phone"
                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
-              </div>
+              </fieldset>
 
               @if (error) {
                 <p role="alert" class="text-sm text-red-600">{{ error }}</p>
@@ -266,10 +306,10 @@ const CATEGORY_ICONS: Record<string, string> = {
 
               <button
                 type="submit"
-                [disabled]="savingContact"
+                [disabled]="savingProfile"
                 class="w-full rounded-lg bg-slate-900 px-4 py-2.5 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
               >
-                {{ savingContact ? 'Saving…' : 'Save' }}
+                {{ savingProfile ? 'Saving…' : 'Save' }}
               </button>
             </form>
 
@@ -303,9 +343,13 @@ export class CrisisComponent implements OnInit {
   education: EducationNote | null = null;
   loadingEducation = false;
 
-  contactName = '';
-  contactPhone = '';
-  savingContact = false;
+  form: ProfileUpdate = {
+    first_name: '',
+    sobriety_start_date: '',
+    safe_contact_name: '',
+    safe_contact_phone: '',
+  };
+  savingProfile = false;
 
   error = '';
 
@@ -316,12 +360,8 @@ export class CrisisComponent implements OnInit {
     });
 
     this.api.profile().subscribe({
-      next: (profile) => {
-        this.profile = profile;
-        this.contactName = profile.safe_contact_name ?? '';
-        this.contactPhone = profile.safe_contact_phone ?? '';
-      },
-      // A missing profile only costs the quick-dial shortcut, so fail quietly.
+      next: (profile) => this.applyProfile(profile),
+      // A missing profile only costs personalisation, so fail quietly.
       error: () => undefined,
     });
   }
@@ -415,18 +455,28 @@ export class CrisisComponent implements OnInit {
     this.view = 'contact';
   }
 
-  saveContact(): void {
-    this.savingContact = true;
+  private applyProfile(profile: Profile): void {
+    this.profile = profile;
+    this.form = {
+      first_name: profile.first_name ?? '',
+      sobriety_start_date: profile.sobriety_start_date?.slice(0, 10) ?? '',
+      safe_contact_name: profile.safe_contact_name ?? '',
+      safe_contact_phone: profile.safe_contact_phone ?? '',
+    };
+  }
+
+  saveProfile(): void {
+    this.savingProfile = true;
     this.error = '';
 
-    this.api.saveSafeContact(this.contactName, this.contactPhone).subscribe({
+    this.api.saveProfile(this.form).subscribe({
       next: (profile) => {
-        this.profile = profile;
-        this.savingContact = false;
+        this.applyProfile(profile);
+        this.savingProfile = false;
         this.view = 'categories';
       },
       error: (err) => {
-        this.savingContact = false;
+        this.savingProfile = false;
         this.error = err.error?.error ?? 'Could not save that.';
       },
     });

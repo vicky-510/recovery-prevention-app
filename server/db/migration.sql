@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS safe_contact_name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS safe_contact_phone TEXT;
 
+-- Personal anchors: what turns a generic script into one addressed to someone.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS sobriety_start_date DATE;
+
 CREATE TABLE IF NOT EXISTS action_categories (
   code TEXT PRIMARY KEY,
   label TEXT NOT NULL

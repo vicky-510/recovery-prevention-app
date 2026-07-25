@@ -9,6 +9,7 @@ import {
   EducationNote,
   Intervention,
   Profile,
+  ProfileUpdate,
   Role,
 } from '../models';
 
@@ -34,8 +35,8 @@ export class ApiService {
     return this.http.get<Profile>('/api/me');
   }
 
-  saveSafeContact(name: string, phone: string): Observable<Profile> {
-    return this.http.put<Profile>('/api/me/safe-contact', { name, phone });
+  saveProfile(update: ProfileUpdate): Observable<Profile> {
+    return this.http.put<Profile>('/api/me', update);
   }
 
   categories(): Observable<Category[]> {

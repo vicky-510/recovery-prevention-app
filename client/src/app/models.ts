@@ -7,8 +7,18 @@ export interface User {
 }
 
 export interface Profile extends User {
+  first_name: string | null;
+  sobriety_start_date: string | null;
   safe_contact_name: string | null;
   safe_contact_phone: string | null;
+  days_sober: number | null;
+}
+
+export interface ProfileUpdate {
+  first_name: string;
+  sobriety_start_date: string;
+  safe_contact_name: string;
+  safe_contact_phone: string;
 }
 
 export interface AuthResponse {

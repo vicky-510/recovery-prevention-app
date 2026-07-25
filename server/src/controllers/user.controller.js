@@ -1,7 +1,12 @@
 import * as userService from '../services/user.service.js';
 
 const PHONE_PATTERN = /^[+()\d][\d\s()+-]{4,24}$/;
-const MAX_NAME_LENGTH = 80;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_NAME_LENGTH = 40;
+
+function blankToNull(value) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
 
 export async function me(req, res, next) {
   try {
@@ -14,26 +19,57 @@ export async function me(req, res, next) {
   }
 }
 
-export async function updateSafeContact(req, res, next) {
+export async function updateProfile(req, res, next) {
   try {
-    const { name, phone } = req.body ?? {};
+    const body = req.body ?? {};
 
-    // Both empty clears the contact.
-    if (!name && !phone) {
-      return res.json(await userService.setSafeContact(req.userId, null, null));
+    const firstName = blankToNull(body.first_name);
+    const sobrietyStartDate = blankToNull(body.sobriety_start_date);
+    const safeContactName = blankToNull(body.safe_contact_name);
+    const safeContactPhone = blankToNull(body.safe_contact_phone);
+
+    if (firstName && firstName.length > MAX_NAME_LENGTH) {
+      return res.status(400).json({ error: `Name must be ${MAX_NAME_LENGTH} characters or fewer.` });
+    }
+    if (safeContactName && safeContactName.length > MAX_NAME_LENGTH) {
+      return res
+        .status(400)
+        .json({ error: `Contact name must be ${MAX_NAME_LENGTH} characters or fewer.` });
     }
 
-    if (!name || !phone) {
-      return res.status(400).json({ error: 'A name and a phone number are both required.' });
-    }
-    if (typeof name !== 'string' || name.trim().length === 0 || name.length > MAX_NAME_LENGTH) {
-      return res.status(400).json({ error: `Name must be 1-${MAX_NAME_LENGTH} characters.` });
-    }
-    if (typeof phone !== 'string' || !PHONE_PATTERN.test(phone.trim())) {
-      return res.status(400).json({ error: 'That does not look like a phone number.' });
+    if (sobrietyStartDate) {
+      if (!DATE_PATTERN.test(sobrietyStartDate)) {
+        return res.status(400).json({ error: 'Date must be in YYYY-MM-DD format.' });
+      }
+      const parsed = new Date(`${sobrietyStartDate}T00:00:00Z`);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ error: 'That is not a real date.' });
+      }
+      if (parsed.getTime() > Date.now()) {
+        return res.status(400).json({ error: 'That date is in the future.' });
+      }
     }
 
-    res.json(await userService.setSafeContact(req.userId, name.trim(), phone.trim()));
+    // A contact is only useful if it can actually be dialled.
+    if (safeContactName || safeContactPhone) {
+      if (!safeContactName || !safeContactPhone) {
+        return res
+          .status(400)
+          .json({ error: 'A contact needs both a name and a phone number.' });
+      }
+      if (!PHONE_PATTERN.test(safeContactPhone)) {
+        return res.status(400).json({ error: 'That does not look like a phone number.' });
+      }
+    }
+
+    res.json(
+      await userService.updateProfile(req.userId, {
+        firstName,
+        sobrietyStartDate,
+        safeContactName,
+        safeContactPhone,
+      })
+    );
   } catch (err) {
     next(err);
   }

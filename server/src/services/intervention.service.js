@@ -13,17 +13,29 @@ export async function categoryExists(code) {
 }
 
 /**
- * Generates a script for this user's role and moment, then records it. A
- * generation failure propagates rather than falling back to canned text — a
- * fabricated script is worse than an honest error for someone in crisis.
+ * Generates a script for this person, their role, and this moment, then records
+ * it. A generation failure propagates rather than falling back to canned text —
+ * a fabricated script is worse than an honest error for someone in crisis.
  */
 export async function createIntervention(userId, categoryCode, localHour) {
-  const { rows: userRows } = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+  const { rows: userRows } = await pool.query(
+    `SELECT role, first_name, safe_contact_name,
+            (CURRENT_DATE - sobriety_start_date) AS days_sober
+     FROM users WHERE id = $1`,
+    [userId]
+  );
+
   if (userRows.length === 0) {
     throw Object.assign(new Error('User no longer exists.'), { status: 401 });
   }
 
-  const script = await generateScript(categoryCode, userRows[0].role, localHour);
+  const user = userRows[0];
+
+  const script = await generateScript(categoryCode, user.role, localHour, {
+    firstName: user.first_name,
+    daysSober: user.days_sober,
+    safeContactName: user.safe_contact_name,
+  });
 
   const { rows } = await pool.query(
     `INSERT INTO interventions (user_id, category_code, context_note, script_json)

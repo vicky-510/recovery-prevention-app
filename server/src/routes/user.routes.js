@@ -6,6 +6,6 @@ const router = Router();
 
 router.use(requireAuth);
 router.get('/', userController.me);
-router.put('/safe-contact', userController.updateSafeContact);
+router.put('/', userController.updateProfile);
 
 export default router;

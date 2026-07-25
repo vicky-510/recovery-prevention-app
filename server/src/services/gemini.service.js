@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { env } from '../config/env.js';
 import { describeTimeOfDay } from '../utils/timeContext.js';
+import { buildAnchors } from '../utils/anchors.js';
 
 const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
@@ -16,6 +17,7 @@ Rules:
 - Each step must be a single action that can be done immediately and alone, in under a minute.
 - If the time of day is given, do not suggest anything impractical at that hour.
 - Address the reader as "you", and refer to whoever they are helping in the third person.
+- Use any personal details you are given naturally and sparingly. Never invent details you were not given.
 - The grounding line is a sentence the reader says out loud, and must reassure rather than instruct.`;
 
 const EDUCATION_SYSTEM_PROMPT = `You explain what is happening in the body and mind during a substance-use crisis, for a reader who is calm enough to read but not clinically trained.
@@ -109,12 +111,15 @@ function normaliseRole(role) {
 }
 
 /** Exported for testing: builds the situation line sent to the model. */
-export function buildSituation(categoryCode, role, localHour) {
+export function buildSituation(categoryCode, role, localHour, profile) {
   const forRole = SITUATIONS[normaliseRole(role)];
   const base = forRole[categoryCode] ?? `Situation: ${categoryCode}.`;
   const time = describeTimeOfDay(localHour);
 
-  return time ? `${base} ${time}` : base;
+  const situation = time ? `${base} ${time}` : base;
+  const anchors = buildAnchors({ ...profile, role: normaliseRole(role) });
+
+  return anchors ? `${situation}\n\n${anchors}` : situation;
 }
 
 /** Exported for testing: builds the educational prompt. */
@@ -142,10 +147,12 @@ async function generateJson({ systemInstruction, contents, responseSchema, tempe
   return JSON.parse(response.text);
 }
 
-export async function generateScript(categoryCode, role, localHour) {
+export async function generateScript(categoryCode, role, localHour, profile) {
+  const situation = buildSituation(categoryCode, role, localHour, profile);
+
   const script = await generateJson({
     systemInstruction: SCRIPT_SYSTEM_PROMPT,
-    contents: `${buildSituation(categoryCode, role, localHour)}\n\nWrite the emergency script now.`,
+    contents: `${situation}\n\nWrite the emergency script now.`,
     responseSchema: SCRIPT_SCHEMA,
     temperature: 0.4,
   });
