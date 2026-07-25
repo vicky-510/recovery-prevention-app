@@ -1,36 +1,38 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Exercises the one path unit tests cannot reach: a real browser capturing from
- * a real MediaRecorder, converting to WAV, and getting a script back from a live
- * Gemini call. Chrome is launched with the fixture WAV standing in for a
- * microphone, so nobody has to speak into one.
+ * Exercises the path unit tests cannot reach: a real getUserMedia capture, a
+ * real MediaRecorder, the browser's own WAV conversion, and a live model call.
+ * Chrome is launched with a spoken WAV standing in for a microphone, so this
+ * needs neither a person nor audio hardware.
+ *
+ * Kept to a single test on purpose. Credential endpoints are rate limited, so
+ * one sign-in per run leaves room to run the suite repeatedly.
  */
 
 const EVALUATOR = { email: 'evaluator@steady.app', password: 'Steady2026!' };
 
-async function signIn(page: import('@playwright/test').Page) {
+test('a spoken note produces a script without choosing a category', async ({ page }) => {
   await page.goto('/');
 
-  // A stored session would skip the form entirely.
-  if (await page.getByRole('button', { name: 'Sign in' }).isVisible().catch(() => false)) {
-    await page.getByLabel('Email').fill(EVALUATOR.email);
-    await page.getByLabel('Password').fill(EVALUATOR.password);
-    await page.getByRole('button', { name: 'Sign in' }).click();
-  }
+  await page.getByLabel('Email').fill(EVALUATOR.email);
+  await page.getByLabel('Password').fill(EVALUATOR.password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
 
   await expect(page.getByRole('heading', { name: "What's happening?" })).toBeVisible();
-}
 
-test('a spoken note produces a script without choosing a category', async ({ page }) => {
-  await signIn(page);
+  // The control only renders where the browser can actually capture.
+  expect(
+    await page.evaluate(
+      () => typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
+    )
+  ).toBe(true);
 
   const record = page.getByRole('button', { name: /just say it/i });
   await expect(record).toBeVisible();
-
   await record.click();
 
-  // Confirms getUserMedia resolved and MediaRecorder started.
+  // Visible only once getUserMedia resolved and MediaRecorder started.
   const stop = page.getByRole('button', { name: /when you're done/i });
   await expect(stop).toBeVisible();
 
@@ -40,8 +42,8 @@ test('a spoken note produces a script without choosing a category', async ({ pag
 
   await expect(page.getByText('Preparing your steps…')).toBeVisible();
 
-  // Gemini classified the audio and returned steps. The category label proves it
-  // was chosen from the recording, since nothing was tapped to select it.
+  // A script came back, and the category label proves the model chose it from
+  // the recording — nothing was tapped to select one.
   await expect(page.getByText(/Step 1 of \d+/)).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText('Urge to use right now')).toBeVisible();
 
@@ -50,15 +52,4 @@ test('a spoken note produces a script without choosing a category', async ({ pag
 
   await page.getByRole('button', { name: /next/i }).click();
   await expect(page.getByText(/Step 2 of \d+/)).toBeVisible();
-});
-
-test('the microphone control is offered when the browser supports capture', async ({ page }) => {
-  await signIn(page);
-
-  const supported = await page.evaluate(
-    () => typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
-  );
-
-  expect(supported).toBe(true);
-  await expect(page.getByRole('button', { name: /just say it/i })).toBeVisible();
 });
