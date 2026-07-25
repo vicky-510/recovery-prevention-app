@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../core/auth.service';
 import { Recording, VoiceService } from '../core/voice.service';
+import { EducationNoteComponent } from './education-note.component';
+import { WaitingComponent } from './waiting.component';
 import { Category, EducationNote, Profile, ProfileUpdate, Script } from '../models';
 
 type View = 'categories' | 'generating' | 'script' | 'education' | 'contact';
@@ -24,7 +26,7 @@ const CATEGORY_STYLE: Record<string, { icon: string; tint: string }> = {
 @Component({
   selector: 'app-crisis',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, EducationNoteComponent, WaitingComponent],
   template: `
     <div class="min-h-screen">
       <a
@@ -175,16 +177,7 @@ const CATEGORY_STYLE: Record<string, { icon: string; tint: string }> = {
           }
 
           @case ('generating') {
-            <div class="flex min-h-[24rem] flex-col items-center justify-center text-center">
-              <div class="relative flex h-20 w-20 items-center justify-center">
-                <span class="absolute inset-0 animate-pulse-ring rounded-full bg-calm/30"></span>
-                <span
-                  class="relative h-16 w-16 animate-breathe rounded-full border border-calm/30 bg-calm/10"
-                ></span>
-              </div>
-              <p class="mt-8 text-lg text-chalk">Putting something together for you</p>
-              <p class="mt-1.5 text-sm text-mist">A few seconds. Breathe until then.</p>
-            </div>
+            <app-waiting />
           }
 
           @case ('script') {
@@ -293,57 +286,9 @@ const CATEGORY_STYLE: Record<string, { icon: string; tint: string }> = {
 
           @case ('education') {
             @if (loadingEducation) {
-              <div class="flex min-h-[24rem] items-center justify-center">
-                <span
-                  class="h-14 w-14 animate-breathe rounded-full border border-calm/30 bg-calm/10"
-                  role="status"
-                  aria-label="Loading"
-                ></span>
-              </div>
+              <app-waiting label="Looking that up" hint="" />
             } @else if (education) {
-              <article class="animate-fade-up">
-                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-calm">
-                  Understanding this
-                </p>
-                <h1 class="mt-2 text-3xl font-semibold leading-tight tracking-tight text-chalk">
-                  {{ education.title }}
-                </h1>
-
-                <p class="mt-6 text-lg leading-relaxed text-mist">
-                  {{ education.why_it_happens }}
-                </p>
-
-                <section class="mt-8 rounded-2xl border border-line bg-surface/70 p-7">
-                  <h2 class="text-xs font-semibold uppercase tracking-[0.14em] text-mist">
-                    What helps
-                  </h2>
-                  <ul class="mt-5 space-y-4">
-                    @for (item of education.what_helps; track item) {
-                      <li class="flex gap-4">
-                        <span
-                          class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-calm"
-                          aria-hidden="true"
-                        ></span>
-                        <span class="leading-relaxed text-chalk">{{ item }}</span>
-                      </li>
-                    }
-                  </ul>
-                </section>
-
-                <p
-                  class="mt-4 rounded-2xl border border-calm/20 bg-calm/[0.06] p-6 leading-relaxed text-chalk"
-                >
-                  {{ education.how_long }}
-                </p>
-
-                <button
-                  type="button"
-                  (click)="backFromEducation()"
-                  class="mt-6 w-full rounded-xl border border-line bg-surface/50 px-4 py-3.5 text-sm text-mist transition hover:border-line/80 hover:text-chalk"
-                >
-                  Back
-                </button>
-              </article>
+              <app-education-note [note]="education" (dismissed)="backFromEducation()" />
             } @else if (error) {
               <div class="animate-fade-up">
                 <p
