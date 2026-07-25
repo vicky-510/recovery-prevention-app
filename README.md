@@ -78,6 +78,8 @@ When a recording is sent instead of a tap, a single multimodal call both classif
 
 There is no ORM, no `jsonwebtoken`, and no state management library. Generative AI is the core engine rather than an added feature: every script and every explainer is produced by a live model call at request time.
 
+![Steady system architecture](docs/architecture.png)
+
 ---
 
 ## Generative AI
