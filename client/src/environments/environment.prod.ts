@@ -1,7 +1,6 @@
 /**
- * Production. The browser calls the API directly rather than through a host
- * redirect: Netlify's proxy times out at 26 seconds, which a cold start on a
- * free-tier backend can exceed.
+ * Generated at build time from API_BASE_URL. Edits here are overwritten
+ * whenever that variable is set; see client/scripts/set-api-url.mjs.
  */
 export const environment = {
   apiBase: 'https://recovery-prevention-app.onrender.com',

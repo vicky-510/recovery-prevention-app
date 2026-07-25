@@ -205,13 +205,23 @@ Free tiers commonly idle out after a period without traffic, and the next reques
 
 ### Frontend
 
-`netlify.toml` at the repository root carries the build settings and the rewrite that lets client-side routing resolve. The production build substitutes `src/environments/environment.prod.ts`, which holds the API's URL — update it when the API moves.
+`netlify.toml` at the repository root carries the build settings and the rewrite that lets client-side routing resolve.
 
 | Setting | Value |
 | --- | --- |
 | Base directory | `client` |
 | Build command | `npm ci && npm run build` |
 | Publish directory | `dist/client/browser` |
+
+Point the build at an API with a single environment variable:
+
+| Variable | Description |
+| --- | --- |
+| `API_BASE_URL` | Origin of the deployed API, for example `https://your-api.onrender.com` |
+
+Angular resolves environment files when it builds, so the value cannot be read from the process at runtime. A `prebuild` step writes it into `src/environments/environment.prod.ts` instead. Leaving the variable unset keeps the committed fallback, so a build never fails for want of it. Changing where the API lives means changing this variable and redeploying — no code edit.
+
+On Netlify the variable belongs under **Site configuration → Environment variables**.
 
 Recording requires a secure context, so the deployed site must be served over HTTPS for voice input to work. Both hosts above provide this by default.
 
@@ -262,6 +272,8 @@ server/
 
 client/
   e2e/                        Playwright tests and audio fixture
+  scripts/                    Writes the API URL in before a build
+  src/environments/           Per-configuration settings
   src/app/
     components/               Login and crisis screens
     core/                     Session, HTTP interceptor, audio
