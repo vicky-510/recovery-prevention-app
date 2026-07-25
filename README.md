@@ -4,6 +4,8 @@ A recovery support platform for people navigating substance use disorders and th
 
 Steady targets a single moment: the minutes during a craving, a panic spiral, or the aftermath of a relapse. Cognitive load is at its peak then, and that is precisely when most applications ask the user to read paragraphs, navigate menus, and type. Steady removes typing from that path entirely. One tap — or one spoken sentence — produces a personalised emergency script, generated live and delivered one step at a time.
 
+**Live:** [recovery-prevention.netlify.app](https://recovery-prevention.netlify.app) · API at [recovery-prevention-app.onrender.com](https://recovery-prevention-app.onrender.com/api/health)
+
 ---
 
 ## Contents
@@ -45,7 +47,7 @@ When a recording is sent instead of a tap, a single multimodal call both classif
 
 ## Features
 
-**Zero-typing crisis path.** Four large tap targets, loaded from the database. No text input exists anywhere between opening the application and receiving help.
+**Zero-typing crisis path.** Four large tap targets, loaded from the database and ordered most to least urgent, so the first thing a distressed reader meets is the most likely reason they opened the app. No text input exists anywhere between opening the application and receiving help.
 
 **Voice input.** A recording is sent to Gemini as audio rather than transcribed locally, so pace, breathing, and distress reach the model instead of being flattened into text. If the audio contains no intelligible speech, the request is rejected rather than answered with a guess.
 
@@ -67,7 +69,7 @@ When a recording is sent instead of a tap, a single multimodal call both classif
 
 | Layer | Choice |
 | --- | --- |
-| Frontend | Angular 18, standalone components, Tailwind CSS |
+| Frontend | Angular 18, standalone components with signals, Tailwind CSS |
 | Backend | Node.js, Express, `route → controller → service` layering |
 | Database | PostgreSQL, accessed with `pg` and parameterised queries |
 | Auth | Email and password with bcrypt; sessions signed with native `crypto` HMAC-SHA256 |
@@ -83,6 +85,8 @@ There is no ORM, no `jsonwebtoken`, and no state management library. Generative 
 - **A PostgreSQL database.** Any instance works; the connection assumes TLS, which suits hosted providers such as Supabase or Neon.
 - **A Google Gemini API key**, from [Google AI Studio](https://aistudio.google.com/apikey).
 - **Google Chrome**, only if running the browser test suite.
+
+> **On Gemini quotas.** Every script is a live model call, so usage maps one-to-one onto the API's quota. The free tier currently allows twenty generations per day per project, which a few rehearsals will reach. Quotas are counted per *project*, not per key, so issuing a second key against the same project does not raise the ceiling — a key in a new project, or billing on the existing one, does. Educational notes are the exception: each is generated once and then read from the database.
 
 ---
 
@@ -161,7 +165,7 @@ Recording requires `MediaRecorder` and `getUserMedia`, and read-aloud requires `
 npm --prefix server test
 ```
 
-118 tests across 7 suites, run with Jest and supertest against a real database. Coverage includes session-token forgery and expiry, password hashing, account-enumeration resistance, request validation, profile isolation between accounts, and the construction of every prompt the application sends.
+123 tests across 7 suites, run with Jest and supertest against a real database. Coverage includes session-token forgery and expiry, password hashing, account-enumeration resistance, request validation, profile isolation between accounts, the ordering of the categories, and the construction of every prompt the application sends.
 
 Prompt construction is kept in pure functions (`utils/anchors.js`, `utils/timeContext.js`, and the exported builders in `gemini.service.js`) so that the rules governing model input are asserted directly, without spending API quota. Requests that fail validation are also rejected before any model call.
 
@@ -243,9 +247,12 @@ All endpoints are prefixed with `/api`. Every route except `/health` and the two
 | `POST` | `/interventions/voice` | Generate a script from a recording. Body: `audio_base64`, `mime_type`, optional `local_hour` |
 | `GET` | `/education/:categoryCode` | Explanatory note for a situation |
 
-`POST /interventions/voice` returns `422` when the recording contains no intelligible speech, so the caller can offer the tap path rather than act on a guess.
+**Roles** are `person` or `caregiver`. **Categories** are `craving`, `panic`, `post_relapse`, and `caregiver_checkin`, returned in presentation order.
 
-**Roles** are `person` or `caregiver`. **Categories** are `craving`, `panic`, `post_relapse`, and `caregiver_checkin`.
+Two responses are worth calling out, because both describe a condition the caller can act on rather than a fault:
+
+- `422` from `/interventions/voice` — the recording held no intelligible speech. Offer the tap path instead of acting on a guess.
+- `503` from either generation route — the model is out of capacity, usually the daily quota. The body carries a message safe to show the reader, along the lines of *try again in a minute*.
 
 ### Security
 
@@ -296,6 +303,10 @@ Controllers validate and translate to status codes. Services own logic and data 
 **Anchors are treated as untrusted input.** Personal details supplied by the user are placed inside prompts, so they are length-capped and stripped of line breaks before use.
 
 **Educational notes are cached; scripts never are.** An explanation of what a craving is does not change between readings, so it is generated once per `(category, role)` and stored. A script is bound to a specific person and moment, and is always generated fresh.
+
+**The interface is dark by default, for a reason.** The application reasons explicitly about the small hours, and a full-brightness white screen at three in the morning works against the person it is meant to help. Motion is used only to slow the reader down — a control that breathes while listening, progress that fills as steps are completed — and is disabled entirely under `prefers-reduced-motion`.
+
+**Failure states are worded for someone who is struggling.** An error tells the reader what to do next rather than what went wrong internally, and the tap path stays available whenever the spoken one does not work.
 
 ---
 
