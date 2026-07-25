@@ -13,6 +13,7 @@ Steady targets a single moment: the minutes during a craving, a panic spiral, or
 - [How it works](#how-it-works)
 - [Features](#features)
 - [Architecture](#architecture)
+- [Generative AI](#generative-ai)
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)
 - [Running the application](#running-the-application)
@@ -76,6 +77,28 @@ When a recording is sent instead of a tap, a single multimodal call both classif
 | AI | Google Gemini via `@google/genai`, structured output enforced with `responseSchema` |
 
 There is no ORM, no `jsonwebtoken`, and no state management library. Generative AI is the core engine rather than an added feature: every script and every explainer is produced by a live model call at request time.
+
+---
+
+## Generative AI
+
+### In the product
+
+**Google Gemini**, through the `@google/genai` SDK. Every generation is a live call at request time; nothing is templated, and nothing is served from a cache the reader did not generate. All three uses live in `server/src/services/gemini.service.js`, with output shape enforced by `responseSchema`.
+
+| Model | Where | What it produces |
+| --- | --- | --- |
+| `gemini-flash-latest` | `POST /api/interventions` | The emergency script — headline, steps, grounding line — shaped by the reader's role, local hour, name, sobriety streak, and trusted contact |
+| `gemini-flash-latest` | `POST /api/interventions/voice` | **Multimodal.** The recording is sent as audio, and one call both classifies the situation from how the person sounds and writes the script |
+| `gemini-flash-latest` | `GET /api/education/:category` | The explanatory note for a situation, tailored to the reader's role |
+
+### In tooling
+
+**`gemini-2.5-flash-preview-tts`** synthesises the spoken audio that the browser test feeds Chrome as a fake microphone (`server/scripts/make-audio-fixture.mjs`). It is a test fixture, and never runs as part of the application.
+
+### In development
+
+**Claude Sonnet 5** and **Claude Opus 5** were used as a pair-programmer while building this: designing the schema and prompts, writing the code and its tests, and investigating failures. Neither is called by the running application.
 
 ---
 
